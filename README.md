@@ -1,2 +1,2 @@
 # grpc-lb
-gRPC load balancer in go
+gRPC load balancer for go
