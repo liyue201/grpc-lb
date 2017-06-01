@@ -25,7 +25,7 @@ type baseSelector struct {
 
 func (b *baseSelector) Add(addr grpc.Address) error {
 	for _, v := range b.addrs {
-		if addr == v.addr {
+		if addr.Addr == v.addr.Addr {
 			return AddrExistErr
 		}
 	}
@@ -34,8 +34,9 @@ func (b *baseSelector) Add(addr grpc.Address) error {
 }
 
 func (b *baseSelector) Delete(addr grpc.Address) error {
+
 	for i, v := range b.addrs {
-		if addr == v.addr {
+		if addr.Addr == v.addr.Addr {
 			copy(b.addrs[i:], b.addrs[i+1:])
 			b.addrs = b.addrs[:len(b.addrs)-1]
 			return nil
@@ -46,7 +47,7 @@ func (b *baseSelector) Delete(addr grpc.Address) error {
 
 func (b *baseSelector) Up(addr grpc.Address) (cnt int, connected bool) {
 	for _, a := range b.addrs {
-		if a.addr == addr {
+		if a.addr.Addr == addr.Addr {
 			if a.connected {
 				return cnt, true
 			}
@@ -61,7 +62,7 @@ func (b *baseSelector) Up(addr grpc.Address) (cnt int, connected bool) {
 
 func (b *baseSelector) Down(addr grpc.Address) error {
 	for _, a := range b.addrs {
-		if addr == a.addr {
+		if addr.Addr == a.addr.Addr {
 			a.connected = false
 			break
 		}

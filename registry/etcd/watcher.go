@@ -62,23 +62,23 @@ func (w *EtcdWatcher) Next() ([]*naming.Update, error) {
 			return []*naming.Update{}, err
 		}
 
+		if resp.Node.Dir {
+			continue
+		}
+
 		updates := []*naming.Update{}
 
 		switch resp.Action {
 		case `set`, `update`, `create`:
-			for _, n := range resp.Node.Nodes {
-				updates = append(updates, &naming.Update{
-					Op:   naming.Add,
-					Addr: n.Value,
-				})
-			}
-		case `delete`:
-			for _, n := range resp.PrevNode.Nodes {
-				updates = append(updates, &naming.Update{
-					Op:   naming.Delete,
-					Addr: n.Value,
-				})
-			}
+			updates = append(updates, &naming.Update{
+				Op:   naming.Add,
+				Addr: resp.Node.Value,
+			})
+		case `delete`, `expire`:
+			updates = append(updates, &naming.Update{
+				Op:   naming.Delete,
+				Addr: resp.PrevNode.Value,
+			})
 		}
 		return updates, nil
 

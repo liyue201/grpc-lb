@@ -21,13 +21,14 @@ func TestRandomLoadBalancer() {
 	}
 	client := proto.NewTestClient(c)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: "haha"})
 		if err != nil {
 			log.Println(err)
-			return
+			continue
 		}
 		log.Printf(resp.Pong)
+		time.Sleep(time.Second)
 	}
 }
 
@@ -41,34 +42,36 @@ func TestRoundRobinLoadBalancer() {
 	}
 	client := proto.NewTestClient(c)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: "haha"})
 		if err != nil {
 			log.Println(err)
-			return
+			continue
 		}
 		log.Printf(resp.Pong)
+		time.Sleep(time.Second)
 	}
 }
 
 func TestKetamaLoadBalancer() {
 	r := registry.NewResolver("/grpc-lb", "test")
 	b := grpclb.NewBalancer(r, grpclb.NewKetamaSelector(grpclb.DefaultKetamaKey))
-	c, err := grpc.Dial("http://120.24.44.201:4001", grpc.WithInsecure(), grpc.WithBalancer(b), grpc.WithTimeout(time.Second))
+	c, err := grpc.Dial("http://120.24.44.201:4001", grpc.WithInsecure(), grpc.WithBalancer(b))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return
 	}
 	client := proto.NewTestClient(c)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		ctx := context.Background()
 		resp, err := client.Hello(context.WithValue(ctx, grpclb.DefaultKetamaKey, fmt.Sprintf("aaaa %d", i)), &proto.HelloReq{Ping: "haha"})
 		if err != nil {
 			log.Println(err)
-			return
+			continue
 		}
 		log.Printf(resp.Pong)
+		time.Sleep(time.Second)
 	}
 }
 
