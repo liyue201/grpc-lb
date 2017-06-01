@@ -20,7 +20,7 @@ func NewRandomSelector() Selector {
 
 func (r *RandomSelector) Get(ctx context.Context) (addr grpc.Address, err error) {
 	if len(r.addrs) == 0 {
-		return nil, errors.New("addr list is emtpy")
+		return addr, errors.New("addr list is emtpy")
 	}
 	return r.addrs[r.r.Int()%len(r.addrs)].addr, nil
 }

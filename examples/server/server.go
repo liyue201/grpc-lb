@@ -13,9 +13,8 @@ import (
 )
 
 type RpcServer struct {
-	addr     string
-	listener net.Listener
-	s        *grpc.Server
+	addr string
+	s    *grpc.Server
 }
 
 func NewRpcServer(addr string) *RpcServer {
@@ -35,7 +34,6 @@ func (s *RpcServer) Run() {
 	}
 	log.Printf("rpc listening on:%s", s.addr)
 
-	s.listener = listener
 	proto.RegisterTestServer(s.s, s)
 	s.s.Serve(listener)
 }

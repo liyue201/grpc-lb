@@ -51,7 +51,6 @@ func (s *KetamaSelector) Get(ctx context.Context) (addr grpc.Address, err error)
 
 	key, ok := ctx.Value(s.ketamaKey).(string)
 	if ok {
-
 		targetAddr, ok := s.hash.Get(key)
 		if ok {
 			for _, v := range s.addrs {
@@ -66,4 +65,5 @@ func (s *KetamaSelector) Get(ctx context.Context) (addr grpc.Address, err error)
 	} else {
 		err = KetamaKeyEmptyErr
 	}
+	return
 }

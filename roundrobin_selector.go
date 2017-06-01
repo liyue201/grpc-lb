@@ -1,7 +1,6 @@
 package grpclb
 
 import (
-	"errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -35,7 +34,8 @@ func (r *RoundRobinSelector) Get(ctx context.Context) (addr grpc.Address, err er
 		}
 		if next == r.next {
 			// Has iterated all the possible address but none is connected.
-			err = errors.New("there is no address available")
+			addr = a.addr
+			r.next = next
 			return
 		}
 	}

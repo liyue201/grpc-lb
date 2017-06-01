@@ -14,7 +14,7 @@ type EtcdResolver struct {
 	ServiceName string
 }
 
-func NewResolver(registryDir, serviceName string) *EtcdResolver {
+func NewResolver(registryDir, serviceName string) naming.Resolver {
 	return &EtcdResolver{RegistryDir: registryDir, ServiceName: serviceName}
 }
 
