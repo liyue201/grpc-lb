@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	etcd "github.com/coreos/etcd/client"
 	"github.com/liyue201/grpc-lb/examples/proto"
 	registry "github.com/liyue201/grpc-lb/registry/etcd"
@@ -11,6 +13,9 @@ import (
 	"sync"
 	"time"
 )
+
+var nodeName = flag.String("node", "node1", "node name")
+var port = flag.Int("port", 8080, "listening port")
 
 type RpcServer struct {
 	addr string
@@ -43,13 +48,20 @@ func (s *RpcServer) Stop() {
 }
 
 func (s *RpcServer) Hello(ctx context.Context, req *proto.HelloReq) (*proto.HelloResp, error) {
-	pong := "Hello " + req.Ping
+	pong := "Hello " + req.Ping + ", I am " + *nodeName
 	log.Println(pong)
 
 	return &proto.HelloResp{Pong: pong}, nil
 }
 
+//go run server.go -node node1 -port 28544
+//go run server.go -node node2 -port 18562
+//go run server.go -node node3 -port 27772
+
 func main() {
+
+	flag.Parse()
+
 	etcdConfg := etcd.Config{
 		Endpoints: []string{"http://120.24.44.201:4001"},
 	}
@@ -58,15 +70,15 @@ func main() {
 			EtcdConfig:  etcdConfg,
 			RegistryDir: "/grpc-lb",
 			ServiceName: "test",
-			NodeName:    "node1",
-			NodeAddr:    "127.0.0.1:6262",
+			NodeName:    *nodeName,
+			NodeAddr:    fmt.Sprintf("127.0.0.1:%d", *port),
 			Ttl:         10 * time.Second,
 		})
 	if err != nil {
 		log.Panic(err)
 		return
 	}
-	server := NewRpcServer("0.0.0.0:6262")
+	server := NewRpcServer(fmt.Sprintf("0.0.0.0:%d", *port))
 	wg := sync.WaitGroup{}
 
 	wg.Add(2)

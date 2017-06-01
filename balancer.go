@@ -11,13 +11,6 @@ import (
 
 var DefaultSelector = NewRandomSelector()
 
-func NewBalancer(r naming.Resolver, selector Selector) grpc.Balancer {
-	if selector == nil {
-		selector = DefaultSelector
-	}
-	return &balancer{r: r, selector: selector}
-}
-
 type AddrInfo struct {
 	addr      grpc.Address
 	connected bool
@@ -27,12 +20,17 @@ type balancer struct {
 	r        naming.Resolver
 	w        naming.Watcher
 	selector Selector
-	//addrs    []*AddrInfo // all the addresses the client should potentially connect
-	mu     sync.Mutex
-	addrCh chan []grpc.Address // the channel to notify gRPC internals the list of addresses the client should connect to.
-	//next   int                 // index of the next address to return for Get()
-	waitCh chan struct{} // the channel to block when there is no connected address available
-	done   bool          // The Balancer is closed.
+	mu       sync.Mutex
+	addrCh   chan []grpc.Address // the channel to notify gRPC internals the list of addresses the client should connect to.
+	waitCh   chan struct{}       // the channel to block when there is no connected address available
+	done     bool                // The Balancer is closed.
+}
+
+func NewBalancer(r naming.Resolver, selector Selector) grpc.Balancer {
+	if selector == nil {
+		selector = DefaultSelector
+	}
+	return &balancer{r: r, selector: selector}
 }
 
 func (b *balancer) watchAddrUpdates() error {
