@@ -1,0 +1,17 @@
+//protoc --go_out=plugins=grpc:. hello.proto
+
+syntax = "proto3";
+
+package proto;
+
+message HelloReq {
+    string ping = 1;
+}
+
+message HelloResp {
+    string pong = 1;
+}
+
+service Test{
+    rpc Hello(HelloReq) returns (HelloResp) {}
+}
