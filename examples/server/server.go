@@ -4,7 +4,9 @@ import (
 	"flag"
 	"fmt"
 	etcd "github.com/coreos/etcd/client"
+	capi "github.com/hashicorp/consul/api"
 	"github.com/liyue201/grpc-lb/examples/proto"
+	cr "github.com/liyue201/grpc-lb/registry/consul"
 	registry "github.com/liyue201/grpc-lb/registry/etcd"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -54,14 +56,7 @@ func (s *RpcServer) Hello(ctx context.Context, req *proto.HelloReq) (*proto.Hell
 	return &proto.HelloResp{Pong: pong}, nil
 }
 
-//go run server.go -node node1 -port 28544
-//go run server.go -node node2 -port 18562
-//go run server.go -node node3 -port 27772
-
-func main() {
-
-	flag.Parse()
-
+func testEtcd() {
 	etcdConfg := etcd.Config{
 		Endpoints: []string{"http://120.24.44.201:4001"},
 	}
@@ -91,4 +86,50 @@ func main() {
 		wg.Done()
 	}()
 	wg.Wait()
+}
+
+func testConsul() {
+	config := &capi.Config{
+		Address: "http://120.24.44.201:8500",
+	}
+
+	registry, err := cr.NewRegistry(
+		&cr.Congfig{
+			ConsulCfg:   config,
+			ServiceName: "test",
+			NodeID:      *nodeName,
+			NodeAddress: "127.0.0.1",
+			NodePort:    *port,
+			Ttl:         5,
+		})
+	if err != nil {
+		log.Panic(err)
+		return
+	}
+	server := NewRpcServer(fmt.Sprintf("0.0.0.0:%d", *port))
+	wg := sync.WaitGroup{}
+
+	wg.Add(2)
+	go func() {
+		server.Run()
+		wg.Done()
+	}()
+	go func() {
+		err := registry.Register()
+		if err != nil {
+			log.Panic(err)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+}
+
+//go run server.go -node node1 -port 28544
+//go run server.go -node node2 -port 18562
+//go run server.go -node node3 -port 27772
+func main() {
+	flag.Parse()
+
+	testEtcd()
+	//testConsul()
 }

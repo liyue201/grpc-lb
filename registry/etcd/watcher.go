@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc/naming"
 )
 
-// EtcdWatcher is the implementaion of grpc.naming.Watcher
+// EtcdWatcher is the implementation of grpc.naming.Watcher
 type EtcdWatcher struct {
 	key     string
 	keyapi  etcd.KeysAPI

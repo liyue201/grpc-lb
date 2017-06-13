@@ -1,9 +1,9 @@
 package etcd
 
 import (
-	"github.com/codinl/go-logger"
 	etcd "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
+	"log"
 	"time"
 )
 
@@ -12,7 +12,8 @@ type EtcdReigistry struct {
 	key    string
 	value  string
 	ttl    time.Duration
-	stop   chan struct{}
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 type Option struct {
@@ -31,31 +32,33 @@ func NewRegistry(option Option) (*EtcdReigistry, error) {
 	}
 	keyapi := etcd.NewKeysAPI(client)
 
+	ctx, cancel := context.WithCancel(context.Background())
 	registry := &EtcdReigistry{
 		keyapi: keyapi,
 		key:    option.RegistryDir + "/" + option.ServiceName + "/" + option.NodeName,
 		value:  option.NodeAddr,
 		ttl:    option.Ttl,
-		stop:   make(chan struct{}),
+		ctx:    ctx,
+		cancel: cancel,
 	}
 	return registry, nil
 }
 
-func (client *EtcdReigistry) Register() error {
+func (e *EtcdReigistry) Register() error {
 
 	insertFunc := func() error {
-		_, err := client.keyapi.Get(context.Background(), client.key, &etcd.GetOptions{Recursive: true})
+		_, err := e.keyapi.Get(context.Background(), e.key, &etcd.GetOptions{Recursive: true})
 		if err != nil {
-			setopt := &etcd.SetOptions{TTL: client.ttl, PrevExist: etcd.PrevIgnore}
-			if _, err := client.keyapi.Set(context.Background(), client.key, client.value, setopt); err != nil {
-				logger.Errorf("etcd: set service '%s' ttl to etcd error: %s\n", client.key, err.Error())
+			setopt := &etcd.SetOptions{TTL: e.ttl, PrevExist: etcd.PrevIgnore}
+			if _, err := e.keyapi.Set(context.Background(), e.key, e.value, setopt); err != nil {
+				log.Printf("etcd: set service '%s' ttl to etcd error: %s\n", e.key, err.Error())
 				return err
 			}
 		} else {
 			// refresh set to true for not notifying the watcher
-			setopt := &etcd.SetOptions{TTL: client.ttl, PrevExist: etcd.PrevExist, Refresh: true}
-			if _, err := client.keyapi.Set(context.Background(), client.key, "", setopt); err != nil {
-				logger.Errorf("etcd: set service '%s' ttl to etcd error: %s\n", client.key, err.Error())
+			setopt := &etcd.SetOptions{TTL: e.ttl, PrevExist: etcd.PrevExist, Refresh: true}
+			if _, err := e.keyapi.Set(context.Background(), e.key, "", setopt); err != nil {
+				log.Printf("etcd: set service '%s' ttl to etcd error: %s\n", e.key, err.Error())
 				return err
 			}
 		}
@@ -67,13 +70,14 @@ func (client *EtcdReigistry) Register() error {
 		return err
 	}
 
-	keepAliveTicker := time.NewTicker(client.ttl / 5)
+	ticker := time.NewTicker(e.ttl / 5)
 	for {
 		select {
-		case <-keepAliveTicker.C:
+		case <-ticker.C:
 			insertFunc()
-		case <-client.stop:
-			client.keyapi.Delete(context.Background(), client.key, &etcd.DeleteOptions{Recursive: true})
+		case <-e.ctx.Done():
+			ticker.Stop()
+			e.keyapi.Delete(context.Background(), e.key, &etcd.DeleteOptions{Recursive: true})
 			return nil
 		}
 	}
@@ -81,7 +85,7 @@ func (client *EtcdReigistry) Register() error {
 	return nil
 }
 
-func (client *EtcdReigistry) Deregister() error {
-	close(client.stop)
+func (e *EtcdReigistry) Deregister() error {
+	e.cancel()
 	return nil
 }
