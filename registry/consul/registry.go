@@ -33,50 +33,59 @@ func NewRegistry(cfg *Congfig) (*ConsulRegistry, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &ConsulRegistry{
-		ctx:    ctx,
-		cancel: cancel,
-		cfg:    cfg,
-		client: c,
+		ctx:     ctx,
+		cancel:  cancel,
+		client:  c,
+		cfg:     cfg,
+		checkId: "service:" + cfg.NodeID,
 	}, nil
 }
 
 func (c *ConsulRegistry) Register() error {
-	ticker := time.NewTicker(time.Duration(c.cfg.Ttl) * time.Second / 5)
 
-	// initial register service
-	regis := &consul.AgentServiceRegistration{
-		ID:      c.cfg.NodeID,
-		Name:    c.cfg.ServiceName,
-		Address: c.cfg.NodeAddress,
-		Port:    c.cfg.NodePort,
-	}
-	err := c.client.Agent().ServiceRegister(regis)
-	if err != nil {
-		return fmt.Errorf("initial register service to consul error: %s\n", err.Error())
+	// register service
+	register := func() error {
+		regis := &consul.AgentServiceRegistration{
+			ID:      c.cfg.NodeID,
+			Name:    c.cfg.ServiceName,
+			Address: c.cfg.NodeAddress,
+			Port:    c.cfg.NodePort,
+			Check: &consul.AgentServiceCheck{
+				TTL:    fmt.Sprintf("%ds", c.cfg.Ttl),
+				Status: consul.HealthPassing,
+				DeregisterCriticalServiceAfter: "1m",
+			}}
+		err := c.client.Agent().ServiceRegister(regis)
+		if err != nil {
+			return fmt.Errorf("register service to consul error: %s\n", err.Error())
+		}
+		return nil
 	}
 
-	// initial register service check
-	c.checkId = c.cfg.ServiceName + ":" + c.cfg.NodeID
-	check := consul.AgentServiceCheck{TTL: fmt.Sprintf("%ds", c.cfg.Ttl), Status: "passing"}
-	err = c.client.Agent().CheckRegister(&consul.AgentCheckRegistration{
-		ID:                c.checkId,
-		Name:              c.cfg.ServiceName,
-		AgentServiceCheck: check,
-	})
+	err := register()
 	if err != nil {
-		return fmt.Errorf("nitial register service check to consul error: %s", err.Error())
+		return err
 	}
+
+	keepAliveTicker := time.NewTicker(time.Duration(c.cfg.Ttl) * time.Second / 5)
+	registerTicker := time.NewTicker(time.Minute)
 
 	for {
 		select {
 		case <-c.ctx.Done():
-			ticker.Stop()
-			c.client.Agent().CheckDeregister(c.checkId)
+			keepAliveTicker.Stop()
+			registerTicker.Stop()
+			c.client.Agent().ServiceDeregister(c.cfg.NodeID)
 			return nil
-		case <-ticker.C:
+		case <-keepAliveTicker.C:
 			err := c.client.Agent().PassTTL(c.checkId, "")
 			if err != nil {
 				grpclog.Printf("consul registry check %v.\n", err)
+			}
+		case <-registerTicker.C:
+			err = register()
+			if err != nil {
+				grpclog.Printf("consul register service error: %v.\n", err)
 			}
 		}
 	}

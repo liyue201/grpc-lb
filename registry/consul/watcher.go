@@ -70,7 +70,7 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 	for _, e := range entries {
 
 		for _, check := range e.Checks {
-			if check.CheckID == e.Service.Service + ":" + e.Service.ID  {
+			if check.ServiceID == e.Service.ID {
 				if check.Status == api.HealthPassing {
 					addr := fmt.Sprintf("%s:%d", e.Service.Address, e.Service.Port)
 					addrs = append(addrs, addr)

@@ -89,7 +89,7 @@ func testEtcd() {
 	}()
 
 	//stop the server after one minute
-	go func(){
+	go func() {
 		time.Sleep(time.Minute)
 		server.Stop()
 		registry.Deregister()
@@ -131,7 +131,7 @@ func testConsul() {
 	}()
 
 	//stop the server after one minute
-	go func(){
+	go func() {
 		time.Sleep(time.Minute)
 		server.Stop()
 		registry.Deregister()
