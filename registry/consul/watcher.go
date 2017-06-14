@@ -70,7 +70,7 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 	for _, e := range entries {
 
 		for _, check := range e.Checks {
-			if check.CheckID == e.Service.ID {
+			if check.CheckID == e.Service.Service + ":" + e.Service.ID  {
 				if check.Status == api.HealthPassing {
 					addr := fmt.Sprintf("%s:%d", e.Service.Address, e.Service.Port)
 					addrs = append(addrs, addr)
@@ -99,7 +99,7 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 	//delete old address
 	for _, oldAddr := range w.addrs {
 		found := false
-		for _, addr := range w.addrs {
+		for _, addr := range addrs {
 			if addr == oldAddr {
 				found = true
 				break

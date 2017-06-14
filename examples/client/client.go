@@ -86,10 +86,10 @@ func TestKetamaLoadBalancer() {
 	}
 }
 
-func TestConsulRandomLoadBalancer() {
+func TestConsulRegistry() {
 	r := cr.NewResolver("test", "http://120.24.44.201:8500")
 	b := grpclb.NewBalancer(r, grpclb.NewRandomSelector())
-	c, err := grpc.Dial("", grpc.WithInsecure(), grpc.WithBalancer(b), grpc.WithTimeout(time.Second*20))
+	c, err := grpc.Dial("", grpc.WithInsecure(), grpc.WithBalancer(b), grpc.WithTimeout(time.Second*2))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return
@@ -97,7 +97,7 @@ func TestConsulRandomLoadBalancer() {
 	client := proto.NewTestClient(c)
 
 	for i := 0; i < 100; i++ {
-		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: "haha"})
+		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: fmt.Sprintf("haha, %d", i)})
 		if err != nil {
 			log.Println(err)
 			continue
@@ -111,6 +111,5 @@ func main() {
 	TestRandomLoadBalancer()
 	//TestRoundRobinLoadBalancer()
 	//TestKetamaLoadBalancer()
-
-	//TestConsulRandomLoadBalancer()
+	//TestConsulRegistry()
 }

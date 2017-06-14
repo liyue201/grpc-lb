@@ -9,10 +9,11 @@ import (
 )
 
 type ConsulRegistry struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	client *consul.Client
-	cfg    *Congfig
+	ctx     context.Context
+	cancel  context.CancelFunc
+	client  *consul.Client
+	cfg     *Congfig
+	checkId string
 }
 
 type Congfig struct {
@@ -55,9 +56,10 @@ func (c *ConsulRegistry) Register() error {
 	}
 
 	// initial register service check
+	c.checkId = c.cfg.ServiceName + ":" + c.cfg.NodeID
 	check := consul.AgentServiceCheck{TTL: fmt.Sprintf("%ds", c.cfg.Ttl), Status: "passing"}
 	err = c.client.Agent().CheckRegister(&consul.AgentCheckRegistration{
-		ID:                c.cfg.NodeID,
+		ID:                c.checkId,
 		Name:              c.cfg.ServiceName,
 		AgentServiceCheck: check,
 	})
@@ -69,9 +71,10 @@ func (c *ConsulRegistry) Register() error {
 		select {
 		case <-c.ctx.Done():
 			ticker.Stop()
+			c.client.Agent().CheckDeregister(c.checkId)
 			return nil
 		case <-ticker.C:
-			err := c.client.Agent().PassTTL(c.cfg.NodeID, "")
+			err := c.client.Agent().PassTTL(c.checkId, "")
 			if err != nil {
 				grpclog.Printf("consul registry check %v.\n", err)
 			}
@@ -83,5 +86,5 @@ func (c *ConsulRegistry) Register() error {
 
 func (c *ConsulRegistry) Deregister() error {
 	c.cancel()
-	return c.client.Agent().CheckDeregister(c.cfg.NodeID)
+	return nil
 }

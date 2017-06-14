@@ -76,15 +76,25 @@ func testEtcd() {
 	server := NewRpcServer(fmt.Sprintf("0.0.0.0:%d", *port))
 	wg := sync.WaitGroup{}
 
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		server.Run()
 		wg.Done()
 	}()
+
+	wg.Add(1)
 	go func() {
 		registry.Register()
 		wg.Done()
 	}()
+
+	//stop the server after one minute
+	go func(){
+		time.Sleep(time.Minute)
+		server.Stop()
+		registry.Deregister()
+	}()
+
 	wg.Wait()
 }
 
@@ -109,18 +119,24 @@ func testConsul() {
 	server := NewRpcServer(fmt.Sprintf("0.0.0.0:%d", *port))
 	wg := sync.WaitGroup{}
 
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		server.Run()
 		wg.Done()
 	}()
+	wg.Add(1)
 	go func() {
-		err := registry.Register()
-		if err != nil {
-			log.Panic(err)
-		}
+		registry.Register()
 		wg.Done()
 	}()
+
+	//stop the server after one minute
+	go func(){
+		time.Sleep(time.Minute)
+		server.Stop()
+		registry.Deregister()
+	}()
+
 	wg.Wait()
 }
 
