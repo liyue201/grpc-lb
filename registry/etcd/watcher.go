@@ -18,7 +18,6 @@ type EtcdWatcher struct {
 
 func (w *EtcdWatcher) Close() {
 	w.cancel()
-	<-w.ctx.Done()
 }
 
 func newEtcdWatcher(key string, cli etcd.Client) naming.Watcher {
@@ -41,7 +40,7 @@ func (w *EtcdWatcher) Next() ([]*naming.Update, error) {
 
 	updates := []*naming.Update{}
 	if len(w.updates) == 0 {
-		resp, _ := w.keyapi.Get(context.Background(), w.key, &etcd.GetOptions{Recursive: true})
+		resp, _ := w.keyapi.Get(w.ctx, w.key, &etcd.GetOptions{Recursive: true})
 
 		for _, n := range resp.Node.Nodes {
 			updates = append(updates, &naming.Update{

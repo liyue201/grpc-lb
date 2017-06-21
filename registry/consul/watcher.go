@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/watch"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/naming"
 	"sync"
 )
@@ -16,13 +15,9 @@ type ConsulWatcher struct {
 	wp          *watch.WatchPlan
 	updates     chan []*naming.Update
 	addrs       []string
-	ctx         context.Context
-	cancel      context.CancelFunc
 }
 
 func newConsulWatcher(serviceName string, address string) naming.Watcher {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	wp, err := watch.Parse(map[string]interface{}{
 		"type":    "service",
 		"service": serviceName,
@@ -35,8 +30,6 @@ func newConsulWatcher(serviceName string, address string) naming.Watcher {
 	w := &ConsulWatcher{
 		serviceName: serviceName,
 		wp:          wp,
-		ctx:         ctx,
-		cancel:      cancel,
 		updates:     make(chan []*naming.Update),
 	}
 	wp.Handler = w.handle
@@ -46,9 +39,7 @@ func newConsulWatcher(serviceName string, address string) naming.Watcher {
 
 func (w *ConsulWatcher) Close() {
 	w.wp.Stop()
-	w.cancel()
 	close(w.updates)
-	<-w.ctx.Done()
 }
 
 func (w *ConsulWatcher) Next() ([]*naming.Update, error) {
