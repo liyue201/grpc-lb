@@ -22,5 +22,14 @@ func (r *RandomSelector) Get(ctx context.Context) (addr grpc.Address, err error)
 	if len(r.addrs) == 0 {
 		return addr, errors.New("addr list is emtpy")
 	}
-	return r.addrs[r.r.Int()%len(r.addrs)].addr, nil
+
+	size := len(r.addrs)
+	idx := r.r.Int() % size
+
+	for i := 0; i < size; i++ {
+		if r.addrs[(idx+i)%size].connected {
+			return r.addrs[(idx+i)%size].addr, nil
+		}
+	}
+	return addr, NoAvailableAddressErr
 }

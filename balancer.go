@@ -103,12 +103,15 @@ func (b *balancer) Start(target string, config grpc.BalancerConfig) error {
 // Up sets the connected state of addr and sends notification if there are pending
 // Get() calls.
 func (b *balancer) Up(addr grpc.Address) func(error) {
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	cnt, connected := b.selector.Up(addr)
 	if connected {
-		return nil
+		return func(err error) {
+			b.down(addr, err)
+		}
 	}
 
 	// addr is only one which is connected. Notify the Get() callers who are blocking.
@@ -142,6 +145,11 @@ func (b *balancer) Get(ctx context.Context, opts grpc.BalancerGetOptions) (addr 
 	addr, err = b.selector.Get(ctx)
 	if err == nil {
 		b.mu.Unlock()
+
+		put = func() {
+			b.selector.Put(addr.Addr)
+		}
+
 		return
 	}
 	if !opts.BlockingWait {
@@ -172,6 +180,9 @@ func (b *balancer) Get(ctx context.Context, opts grpc.BalancerGetOptions) (addr 
 
 			addr, err = b.selector.Get(ctx)
 			if err == nil {
+				put = func() {
+					b.selector.Put(addr.Addr)
+				}
 				b.mu.Unlock()
 				return
 			}
