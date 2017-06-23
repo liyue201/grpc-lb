@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var nodeName = flag.String("node", "node1", "node name")
+var nodeID = flag.String("node", "node1", "node ID")
 var port = flag.Int("port", 8080, "listening port")
 
 type RpcServer struct {
@@ -50,7 +50,7 @@ func (s *RpcServer) Stop() {
 }
 
 func (s *RpcServer) Hello(ctx context.Context, req *proto.HelloReq) (*proto.HelloResp, error) {
-	pong := "Hello " + req.Ping + ", I am " + *nodeName
+	pong := "Hello " + req.Ping + ", I am " + *nodeID
 	log.Println(pong)
 
 	return &proto.HelloResp{Pong: pong}, nil
@@ -60,14 +60,18 @@ func testEtcd() {
 	etcdConfg := etcd.Config{
 		Endpoints: []string{"http://120.24.44.201:4001"},
 	}
+
 	registry, err := registry.NewRegistry(
 		registry.Option{
 			EtcdConfig:  etcdConfg,
 			RegistryDir: "/grpc-lb",
 			ServiceName: "test",
-			NodeName:    *nodeName,
-			NodeAddr:    fmt.Sprintf("127.0.0.1:%d", *port),
-			Ttl:         10 * time.Second,
+			NodeID:      *nodeID,
+			Data: registry.NodeData{
+				Addr:     fmt.Sprintf("127.0.0.1:%d", *port),
+				Metadata: map[string]string{"weight": "1"},
+			},
+			Ttl: 10 * time.Second,
 		})
 	if err != nil {
 		log.Panic(err)
@@ -89,11 +93,11 @@ func testEtcd() {
 	}()
 
 	//stop the server after one minute
-	go func() {
-		time.Sleep(time.Minute)
-		server.Stop()
-		registry.Deregister()
-	}()
+	//go func() {
+	//	time.Sleep(time.Minute)
+	//	server.Stop()
+	//	registry.Deregister()
+	//}()
 
 	wg.Wait()
 }
@@ -107,10 +111,13 @@ func testConsul() {
 		&cr.Congfig{
 			ConsulCfg:   config,
 			ServiceName: "test",
-			NodeID:      *nodeName,
-			NodeAddress: "127.0.0.1",
-			NodePort:    *port,
-			Ttl:         5,
+			NData: cr.NodeData{
+				ID:       *nodeID,
+				Address:  "127.0.0.1",
+				Port:     *port,
+				Metadata: map[string]string{"weight": "1"},
+			},
+			Ttl: 5,
 		})
 	if err != nil {
 		log.Panic(err)
@@ -126,16 +133,17 @@ func testConsul() {
 	}()
 	wg.Add(1)
 	go func() {
+
 		registry.Register()
 		wg.Done()
 	}()
 
 	//stop the server after one minute
-	go func() {
-		time.Sleep(time.Minute)
-		server.Stop()
-		registry.Deregister()
-	}()
+	//go func() {
+	//	time.Sleep(time.Minute)
+	//	server.Stop()
+	//	registry.Deregister()
+	//}()
 
 	wg.Wait()
 }

@@ -26,10 +26,11 @@ func TestRandomLoadBalancer() {
 	}
 	client := proto.NewTestClient(c)
 
-	for i := 0; i < 100; i++ {
-		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: "haha"})
+	for i := 0; i < 10000; i++ {
+		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: fmt.Sprintf("%d:etcd random", i)})
 		if err != nil {
 			log.Println(err)
+			time.Sleep(time.Second)
 			continue
 		}
 		log.Printf(resp.Pong)
@@ -50,10 +51,11 @@ func TestRoundRobinLoadBalancer() {
 	}
 	client := proto.NewTestClient(c)
 
-	for i := 0; i < 100; i++ {
-		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: "haha"})
+	for i := 0; i < 10000; i++ {
+		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: fmt.Sprintf("%d:etcd roundRobin", i)})
 		if err != nil {
 			log.Println(err)
+			time.Sleep(time.Second)
 			continue
 		}
 		log.Printf(resp.Pong)
@@ -74,11 +76,13 @@ func TestKetamaLoadBalancer() {
 	}
 	client := proto.NewTestClient(c)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		ctx := context.Background()
-		resp, err := client.Hello(context.WithValue(ctx, grpclb.DefaultKetamaKey, fmt.Sprintf("aaaa %d", i)), &proto.HelloReq{Ping: "haha"})
+		resp, err := client.Hello(context.WithValue(ctx, grpclb.DefaultKetamaKey, fmt.Sprintf("aaaa %d", i)),
+			&proto.HelloReq{Ping: fmt.Sprintf("%d:etcd ketama", i)})
 		if err != nil {
 			log.Println(err)
+			time.Sleep(time.Second)
 			continue
 		}
 		log.Printf(resp.Pong)
@@ -97,9 +101,10 @@ func TestConsulRegistry() {
 	client := proto.NewTestClient(c)
 
 	for i := 0; i < 100; i++ {
-		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: fmt.Sprintf("haha, %d", i)})
+		resp, err := client.Hello(context.Background(), &proto.HelloReq{Ping: fmt.Sprintf("%d, Consul", i)})
 		if err != nil {
 			log.Println(err)
+			time.Sleep(time.Second)
 			continue
 		}
 		log.Printf(resp.Pong)

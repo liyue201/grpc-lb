@@ -1,8 +1,10 @@
 package etcd
 
 import (
+	"encoding/json"
 	etcd "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/naming"
 )
 
@@ -43,9 +45,17 @@ func (w *EtcdWatcher) Next() ([]*naming.Update, error) {
 		resp, _ := w.keyapi.Get(w.ctx, w.key, &etcd.GetOptions{Recursive: true})
 
 		for _, n := range resp.Node.Nodes {
+			nodeData := NodeData{}
+
+			err := json.Unmarshal([]byte(n.Value), &nodeData)
+			if err != nil {
+				grpclog.Println("Parse node data error:", err)
+				continue
+			}
 			updates = append(updates, &naming.Update{
-				Op:   naming.Add,
-				Addr: n.Value,
+				Op:       naming.Add,
+				Addr:     nodeData.Addr,
+				Metadata: &nodeData.Metadata,
 			})
 		}
 
@@ -69,14 +79,29 @@ func (w *EtcdWatcher) Next() ([]*naming.Update, error) {
 
 		switch resp.Action {
 		case `set`, `update`, `create`:
+			nodeData := NodeData{}
+			err := json.Unmarshal([]byte(resp.Node.Value), &nodeData)
+			if err != nil {
+				grpclog.Println("Parse node data error:", err)
+				continue
+			}
 			updates = append(updates, &naming.Update{
-				Op:   naming.Add,
-				Addr: resp.Node.Value,
+				Op:       naming.Add,
+				Addr:     nodeData.Addr,
+				Metadata: &nodeData.Metadata,
 			})
+
 		case `delete`, `expire`:
+			nodeData := NodeData{}
+			err := json.Unmarshal([]byte(resp.PrevNode.Value), &nodeData)
+			if err != nil {
+				grpclog.Println("Parse node data error:", err)
+				continue
+			}
+
 			updates = append(updates, &naming.Update{
 				Op:   naming.Delete,
-				Addr: resp.PrevNode.Value,
+				Addr: nodeData.Addr,
 			})
 		}
 		return updates, nil

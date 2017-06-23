@@ -1,9 +1,10 @@
 package etcd
 
 import (
+	"encoding/json"
 	etcd "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
-	"log"
+	"google.golang.org/grpc/grpclog"
 	"time"
 )
 
@@ -20,9 +21,14 @@ type Option struct {
 	EtcdConfig  etcd.Config
 	RegistryDir string
 	ServiceName string
-	NodeName    string
-	NodeAddr    string
+	NodeID      string
+	Data        NodeData
 	Ttl         time.Duration
+}
+
+type NodeData struct {
+	Addr     string
+	Metadata map[string]string
 }
 
 func NewRegistry(option Option) (*EtcdReigistry, error) {
@@ -32,11 +38,16 @@ func NewRegistry(option Option) (*EtcdReigistry, error) {
 	}
 	keyapi := etcd.NewKeysAPI(client)
 
+	val, err := json.Marshal(option.Data)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	registry := &EtcdReigistry{
 		keyapi: keyapi,
-		key:    option.RegistryDir + "/" + option.ServiceName + "/" + option.NodeName,
-		value:  option.NodeAddr,
+		key:    option.RegistryDir + "/" + option.ServiceName + "/" + option.NodeID,
+		value:  string(val),
 		ttl:    option.Ttl,
 		ctx:    ctx,
 		cancel: cancel,
@@ -47,18 +58,18 @@ func NewRegistry(option Option) (*EtcdReigistry, error) {
 func (e *EtcdReigistry) Register() error {
 
 	insertFunc := func() error {
-		_, err := e.keyapi.Get(context.Background(), e.key, &etcd.GetOptions{Recursive: true})
+		_, err := e.keyapi.Get(e.ctx, e.key, &etcd.GetOptions{Recursive: true})
 		if err != nil {
 			setopt := &etcd.SetOptions{TTL: e.ttl, PrevExist: etcd.PrevIgnore}
-			if _, err := e.keyapi.Set(context.Background(), e.key, e.value, setopt); err != nil {
-				log.Printf("etcd: set service '%s' ttl to etcd error: %s\n", e.key, err.Error())
+			if _, err := e.keyapi.Set(e.ctx, e.key, e.value, setopt); err != nil {
+				grpclog.Printf("etcd: set service '%s' ttl to etcd error: %s\n", e.key, err.Error())
 				return err
 			}
 		} else {
 			// refresh set to true for not notifying the watcher
 			setopt := &etcd.SetOptions{TTL: e.ttl, PrevExist: etcd.PrevExist, Refresh: true}
-			if _, err := e.keyapi.Set(context.Background(), e.key, "", setopt); err != nil {
-				log.Printf("etcd: set service '%s' ttl to etcd error: %s\n", e.key, err.Error())
+			if _, err := e.keyapi.Set(e.ctx, e.key, "", setopt); err != nil {
+				grpclog.Printf("etcd: set service '%s' ttl to etcd error: %s\n", e.key, err.Error())
 				return err
 			}
 		}

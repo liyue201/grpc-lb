@@ -2,6 +2,7 @@ package consul
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	consul "github.com/hashicorp/consul/api"
 	"google.golang.org/grpc/grpclog"
@@ -19,10 +20,15 @@ type ConsulRegistry struct {
 type Congfig struct {
 	ConsulCfg   *consul.Config
 	ServiceName string
-	NodeID      string
-	NodeAddress string
-	NodePort    int
+	NData       NodeData
 	Ttl         int //ttl seconds
+}
+
+type NodeData struct {
+	ID       string
+	Address  string
+	Port     int
+	Metadata map[string]string
 }
 
 func NewRegistry(cfg *Congfig) (*ConsulRegistry, error) {
@@ -37,19 +43,27 @@ func NewRegistry(cfg *Congfig) (*ConsulRegistry, error) {
 		cancel:  cancel,
 		client:  c,
 		cfg:     cfg,
-		checkId: "service:" + cfg.NodeID,
+		checkId: "service:" + cfg.NData.ID,
 	}, nil
 }
 
 func (c *ConsulRegistry) Register() error {
 
 	// register service
+	metadata, err := json.Marshal(c.cfg.NData.Metadata)
+	if err != nil {
+		return err
+	}
+	tags := make([]string, 0)
+	tags = append(tags, string(metadata))
+
 	register := func() error {
 		regis := &consul.AgentServiceRegistration{
-			ID:      c.cfg.NodeID,
+			ID:      c.cfg.NData.ID,
 			Name:    c.cfg.ServiceName,
-			Address: c.cfg.NodeAddress,
-			Port:    c.cfg.NodePort,
+			Address: c.cfg.NData.Address,
+			Port:    c.cfg.NData.Port,
+			Tags:    tags,
 			Check: &consul.AgentServiceCheck{
 				TTL:    fmt.Sprintf("%ds", c.cfg.Ttl),
 				Status: consul.HealthPassing,
@@ -62,7 +76,7 @@ func (c *ConsulRegistry) Register() error {
 		return nil
 	}
 
-	err := register()
+	err = register()
 	if err != nil {
 		return err
 	}
@@ -75,7 +89,7 @@ func (c *ConsulRegistry) Register() error {
 		case <-c.ctx.Done():
 			keepAliveTicker.Stop()
 			registerTicker.Stop()
-			c.client.Agent().ServiceDeregister(c.cfg.NodeID)
+			c.client.Agent().ServiceDeregister(c.cfg.NData.ID)
 			return nil
 		case <-keepAliveTicker.C:
 			err := c.client.Agent().PassTTL(c.checkId, "")
