@@ -69,7 +69,7 @@ func TestKetamaLoadBalancer() {
 	}
 	r := registry.NewResolver("/grpc-lb", "test", etcdConfg)
 	b := grpclb.NewBalancer(r, grpclb.NewKetamaSelector(grpclb.DefaultKetamaKey))
-	c, err := grpc.Dial("", grpc.WithInsecure(), grpc.WithBalancer(b))
+	c, err := grpc.Dial("", grpc.WithInsecure(), grpc.WithBalancer(b), grpc.WithTimeout(time.Second))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return
@@ -79,7 +79,7 @@ func TestKetamaLoadBalancer() {
 	for i := 0; i < 10000; i++ {
 		ctx := context.Background()
 		resp, err := client.Hello(context.WithValue(ctx, grpclb.DefaultKetamaKey, fmt.Sprintf("aaaa %d", i)),
-			&proto.HelloReq{Ping: fmt.Sprintf("%d:etcd ketama", i)})
+			&proto.HelloReq{Ping: fmt.Sprintf("%d:etcd Ketama", i)})
 		if err != nil {
 			log.Println(err)
 			time.Sleep(time.Second)

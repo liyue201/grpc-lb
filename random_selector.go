@@ -14,8 +14,10 @@ type RandomSelector struct {
 }
 
 func NewRandomSelector() Selector {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return &RandomSelector{r: r}
+	return &RandomSelector{
+		r:            rand.New(rand.NewSource(time.Now().UnixNano())),
+		baseSelector: baseSelector{addrMap: make(map[string]*AddrInfo)},
+	}
 }
 
 func (r *RandomSelector) Get(ctx context.Context) (addr grpc.Address, err error) {
@@ -27,8 +29,12 @@ func (r *RandomSelector) Get(ctx context.Context) (addr grpc.Address, err error)
 	idx := r.r.Int() % size
 
 	for i := 0; i < size; i++ {
-		if r.addrs[(idx+i)%size].connected {
-			return r.addrs[(idx+i)%size].addr, nil
+		addr := r.addrs[(idx+i)%size]
+		if addrInfo, ok := r.addrMap[addr]; ok {
+			if addrInfo.connected {
+				addrInfo.load++
+				return addrInfo.addr, nil
+			}
 		}
 	}
 	return addr, NoAvailableAddressErr

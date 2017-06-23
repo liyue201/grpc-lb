@@ -22,7 +22,7 @@ type Option struct {
 	RegistryDir string
 	ServiceName string
 	NodeID      string
-	Data        NodeData
+	NData       NodeData
 	Ttl         time.Duration
 }
 
@@ -38,7 +38,7 @@ func NewRegistry(option Option) (*EtcdReigistry, error) {
 	}
 	keyapi := etcd.NewKeysAPI(client)
 
-	val, err := json.Marshal(option.Data)
+	val, err := json.Marshal(option.NData)
 	if err != nil {
 		return nil, err
 	}

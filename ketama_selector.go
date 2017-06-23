@@ -2,8 +2,10 @@ package grpclb
 
 import (
 	"errors"
+	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"strings"
 )
 
 type KetamaSelector struct {
@@ -22,15 +24,29 @@ func NewKetamaSelector(ketamaKey string) Selector {
 		ketamaKey = DefaultKetamaKey
 	}
 	return &KetamaSelector{
-		hash:      NewKetama(50, nil),
-		ketamaKey: ketamaKey,
+		hash:         NewKetama(10, nil),
+		ketamaKey:    ketamaKey,
+		baseSelector: baseSelector{addrMap: make(map[string]*AddrInfo)},
 	}
 }
 
+func (s *KetamaSelector) wrapAddr(addr string, idx int) string {
+	return fmt.Sprintf("%s-%d", addr, idx)
+}
+
+func (s *KetamaSelector) upWrapAddr(addr string) string {
+	ss := strings.Split(addr, "-")
+	return ss[0]
+}
+
 func (s *KetamaSelector) Add(addr grpc.Address) error {
+	fmt.Println("add", addr.Addr)
 	err := s.baseSelector.Add(addr)
 	if err == nil {
-		s.hash.Add(addr.Addr)
+		a, _ := s.addrMap[addr.Addr]
+		for i := 0; i < a.weight; i++ {
+			s.hash.Add(s.wrapAddr(addr.Addr, i))
+		}
 	}
 	return err
 }
@@ -38,9 +54,14 @@ func (s *KetamaSelector) Add(addr grpc.Address) error {
 func (s *KetamaSelector) Delete(addr grpc.Address) error {
 	err := s.baseSelector.Delete(addr)
 	if err == nil {
-		s.hash.Remove(addr.Addr)
+		a, ok := s.addrMap[addr.Addr]
+		if ok {
+			for i := 0; i < a.weight; i++ {
+				s.hash.Remove(s.wrapAddr(addr.Addr, i))
+			}
+		}
 	}
-	return nil
+	return err
 }
 
 func (s *KetamaSelector) Get(ctx context.Context) (addr grpc.Address, err error) {
@@ -48,15 +69,19 @@ func (s *KetamaSelector) Get(ctx context.Context) (addr grpc.Address, err error)
 		err = AddrListEmptyErr
 		return
 	}
-
 	key, ok := ctx.Value(s.ketamaKey).(string)
 	if ok {
 		targetAddr, ok := s.hash.Get(key)
 		if ok {
+			targetAddr = s.upWrapAddr(targetAddr)
 			for _, v := range s.addrs {
-				if v.addr.Addr == targetAddr {
-					addr = v.addr
-					return
+				if v == targetAddr {
+					if addrInfo, ok := s.addrMap[v]; ok {
+						if addrInfo.connected {
+							addrInfo.load++
+							return addrInfo.addr, nil
+						}
+					}
 				}
 			}
 		} else {
@@ -65,5 +90,6 @@ func (s *KetamaSelector) Get(ctx context.Context) (addr grpc.Address, err error)
 	} else {
 		err = KetamaKeyEmptyErr
 	}
-	return
+
+	return addr, NoAvailableAddressErr
 }

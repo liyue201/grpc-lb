@@ -67,7 +67,7 @@ func testEtcd() {
 			RegistryDir: "/grpc-lb",
 			ServiceName: "test",
 			NodeID:      *nodeID,
-			Data: registry.NodeData{
+			NData: registry.NodeData{
 				Addr:     fmt.Sprintf("127.0.0.1:%d", *port),
 				Metadata: map[string]string{"weight": "1"},
 			},

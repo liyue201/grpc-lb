@@ -13,6 +13,8 @@ var DefaultSelector = NewRandomSelector()
 
 type AddrInfo struct {
 	addr      grpc.Address
+	weight    int    //load weigth
+	load      uint64 //current number of requests
 	connected bool
 }
 
@@ -55,17 +57,11 @@ func (b *balancer) watchAddrUpdates() error {
 			grpclog.Println("Unknown update.Op ", update.Op)
 		}
 	}
-	// Make a copy of b.addrs and write it onto b.addrCh so that gRPC internals gets notified.
-	addrs := b.selector.AddrList()
-	open := make([]grpc.Address, len(addrs))
-	for i, v := range addrs {
-		open[i] = v.addr
-	}
-
 	if b.done {
 		return grpc.ErrClientConnClosing
 	}
-	b.addrCh <- open
+	addrs := b.selector.AddrList()
+	b.addrCh <- addrs
 	return nil
 }
 
@@ -103,7 +99,6 @@ func (b *balancer) Start(target string, config grpc.BalancerConfig) error {
 // Up sets the connected state of addr and sends notification if there are pending
 // Get() calls.
 func (b *balancer) Up(addr grpc.Address) func(error) {
-
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
