@@ -60,6 +60,11 @@ func (b *balancer) watchAddrUpdates() error {
 	if b.done {
 		return grpc.ErrClientConnClosing
 	}
+	select {
+	case <-b.addrCh:
+	default:
+	}
+
 	addrs := b.selector.AddrList()
 	b.addrCh <- addrs
 	return nil
@@ -85,7 +90,7 @@ func (b *balancer) Start(target string, config grpc.BalancerConfig) error {
 		return err
 	}
 	b.w = w
-	b.addrCh = make(chan []grpc.Address)
+	b.addrCh = make(chan []grpc.Address, 1)
 	go func() {
 		for {
 			if err := b.watchAddrUpdates(); err != nil {
