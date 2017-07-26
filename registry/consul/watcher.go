@@ -14,7 +14,7 @@ import (
 type ConsulWatcher struct {
 	sync.RWMutex
 	serviceName string
-	wp          *watch.WatchPlan
+	wp          *watch.Plan
 	updates     chan []*naming.Update
 	addrs       []*naming.Update
 }
