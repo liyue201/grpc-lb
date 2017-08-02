@@ -9,8 +9,8 @@ It is generated from these files:
 	hello.proto
 
 It has these top-level messages:
-	HelloReq
-	HelloResp
+	SayReq
+	SayResp
 */
 package proto
 
@@ -34,27 +34,27 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto1.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type HelloReq struct {
-	Ping string `protobuf:"bytes,1,opt,name=ping" json:"ping,omitempty"`
+type SayReq struct {
+	Content string `protobuf:"bytes,1,opt,name=content" json:"content,omitempty"`
 }
 
-func (m *HelloReq) Reset()                    { *m = HelloReq{} }
-func (m *HelloReq) String() string            { return proto1.CompactTextString(m) }
-func (*HelloReq) ProtoMessage()               {}
-func (*HelloReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *SayReq) Reset()                    { *m = SayReq{} }
+func (m *SayReq) String() string            { return proto1.CompactTextString(m) }
+func (*SayReq) ProtoMessage()               {}
+func (*SayReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-type HelloResp struct {
-	Pong string `protobuf:"bytes,1,opt,name=pong" json:"pong,omitempty"`
+type SayResp struct {
+	Content string `protobuf:"bytes,1,opt,name=content" json:"content,omitempty"`
 }
 
-func (m *HelloResp) Reset()                    { *m = HelloResp{} }
-func (m *HelloResp) String() string            { return proto1.CompactTextString(m) }
-func (*HelloResp) ProtoMessage()               {}
-func (*HelloResp) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (m *SayResp) Reset()                    { *m = SayResp{} }
+func (m *SayResp) String() string            { return proto1.CompactTextString(m) }
+func (*SayResp) ProtoMessage()               {}
+func (*SayResp) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
 func init() {
-	proto1.RegisterType((*HelloReq)(nil), "proto.HelloReq")
-	proto1.RegisterType((*HelloResp)(nil), "proto.HelloResp")
+	proto1.RegisterType((*SayReq)(nil), "proto.SayReq")
+	proto1.RegisterType((*SayResp)(nil), "proto.SayResp")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -68,7 +68,7 @@ const _ = grpc.SupportPackageIsVersion3
 // Client API for Test service
 
 type TestClient interface {
-	Hello(ctx context.Context, in *HelloReq, opts ...grpc.CallOption) (*HelloResp, error)
+	Say(ctx context.Context, in *SayReq, opts ...grpc.CallOption) (*SayResp, error)
 }
 
 type testClient struct {
@@ -79,9 +79,9 @@ func NewTestClient(cc *grpc.ClientConn) TestClient {
 	return &testClient{cc}
 }
 
-func (c *testClient) Hello(ctx context.Context, in *HelloReq, opts ...grpc.CallOption) (*HelloResp, error) {
-	out := new(HelloResp)
-	err := grpc.Invoke(ctx, "/proto.Test/Hello", in, out, c.cc, opts...)
+func (c *testClient) Say(ctx context.Context, in *SayReq, opts ...grpc.CallOption) (*SayResp, error) {
+	out := new(SayResp)
+	err := grpc.Invoke(ctx, "/proto.Test/Say", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -91,27 +91,27 @@ func (c *testClient) Hello(ctx context.Context, in *HelloReq, opts ...grpc.CallO
 // Server API for Test service
 
 type TestServer interface {
-	Hello(context.Context, *HelloReq) (*HelloResp, error)
+	Say(context.Context, *SayReq) (*SayResp, error)
 }
 
 func RegisterTestServer(s *grpc.Server, srv TestServer) {
 	s.RegisterService(&_Test_serviceDesc, srv)
 }
 
-func _Test_Hello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HelloReq)
+func _Test_Say_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SayReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TestServer).Hello(ctx, in)
+		return srv.(TestServer).Say(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Test/Hello",
+		FullMethod: "/proto.Test/Say",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServer).Hello(ctx, req.(*HelloReq))
+		return srv.(TestServer).Say(ctx, req.(*SayReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -121,8 +121,8 @@ var _Test_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*TestServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Hello",
-			Handler:    _Test_Hello_Handler,
+			MethodName: "Say",
+			Handler:    _Test_Say_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -132,13 +132,13 @@ var _Test_serviceDesc = grpc.ServiceDesc{
 func init() { proto1.RegisterFile("hello.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 117 bytes of a gzipped FileDescriptorProto
+	// 116 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0xce, 0x48, 0xcd, 0xc9,
-	0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x53, 0x4a, 0x72, 0x5c, 0x1c, 0x1e,
-	0x20, 0xd1, 0xa0, 0xd4, 0x42, 0x21, 0x21, 0x2e, 0x96, 0x82, 0xcc, 0xbc, 0x74, 0x09, 0x46, 0x05,
-	0x46, 0x0d, 0xce, 0x20, 0x30, 0x5b, 0x49, 0x9e, 0x8b, 0x13, 0x2a, 0x5f, 0x5c, 0x00, 0x56, 0x90,
-	0x8f, 0xa4, 0x20, 0x3f, 0x2f, 0xdd, 0xc8, 0x84, 0x8b, 0x25, 0x24, 0xb5, 0xb8, 0x44, 0x48, 0x87,
-	0x8b, 0x15, 0xac, 0x50, 0x88, 0x1f, 0x62, 0x81, 0x1e, 0xcc, 0x58, 0x29, 0x01, 0x54, 0x81, 0xe2,
-	0x02, 0x25, 0x86, 0x24, 0x36, 0xb0, 0x90, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0x58, 0x76, 0x6f,
-	0x3d, 0x93, 0x00, 0x00, 0x00,
+	0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x53, 0x4a, 0x4a, 0x5c, 0x6c, 0xc1,
+	0x89, 0x95, 0x41, 0xa9, 0x85, 0x42, 0x12, 0x5c, 0xec, 0xc9, 0xf9, 0x79, 0x25, 0xa9, 0x79, 0x25,
+	0x12, 0x8c, 0x0a, 0x8c, 0x1a, 0x9c, 0x41, 0x30, 0xae, 0x92, 0x32, 0x17, 0x3b, 0x58, 0x4d, 0x71,
+	0x01, 0x6e, 0x45, 0x46, 0x7a, 0x5c, 0x2c, 0x21, 0xa9, 0xc5, 0x25, 0x42, 0x6a, 0x5c, 0xcc, 0xc1,
+	0x89, 0x95, 0x42, 0xbc, 0x10, 0x6b, 0xf4, 0x20, 0x86, 0x4b, 0xf1, 0x21, 0x73, 0x8b, 0x0b, 0x94,
+	0x18, 0x92, 0xd8, 0xc0, 0x02, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x5f, 0x16, 0xd7, 0x0a,
+	0x95, 0x00, 0x00, 0x00,
 }

@@ -4,9 +4,7 @@ import (
 	"flag"
 	"fmt"
 	etcd "github.com/coreos/etcd/client"
-	capi "github.com/hashicorp/consul/api"
 	"github.com/liyue201/grpc-lb/examples/proto"
-	cr "github.com/liyue201/grpc-lb/registry/consul"
 	registry "github.com/liyue201/grpc-lb/registry/etcd"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -49,14 +47,14 @@ func (s *RpcServer) Stop() {
 	s.s.GracefulStop()
 }
 
-func (s *RpcServer) Hello(ctx context.Context, req *proto.HelloReq) (*proto.HelloResp, error) {
-	pong := "Hello " + req.Ping + ", I am " + *nodeID
-	log.Println(pong)
+func (s *RpcServer) Say(ctx context.Context, req *proto.SayReq) (*proto.SayResp, error) {
+	text := "Hello " + req.Content + ", I am " + *nodeID
+	log.Println(text)
 
-	return &proto.HelloResp{Pong: pong}, nil
+	return &proto.SayResp{Content: text}, nil
 }
 
-func testEtcd() {
+func StartService() {
 	etcdConfg := etcd.Config{
 		Endpoints: []string{"http://120.24.44.201:4001"},
 	}
@@ -68,8 +66,8 @@ func testEtcd() {
 			ServiceName: "test",
 			NodeID:      *nodeID,
 			NData: registry.NodeData{
-				Addr:     fmt.Sprintf("127.0.0.1:%d", *port),
-				Metadata: map[string]string{"weight": "1"},
+				Addr: fmt.Sprintf("127.0.0.1:%d", *port),
+				//Metadata: map[string]string{"weight": "1"},
 			},
 			Ttl: 10 * time.Second,
 		})
@@ -102,58 +100,10 @@ func testEtcd() {
 	wg.Wait()
 }
 
-func testConsul() {
-	config := &capi.Config{
-		Address: "http://120.24.44.201:8500",
-	}
-
-	registry, err := cr.NewRegistry(
-		&cr.Congfig{
-			ConsulCfg:   config,
-			ServiceName: "test",
-			NData: cr.NodeData{
-				ID:       *nodeID,
-				Address:  "127.0.0.1",
-				Port:     *port,
-				Metadata: map[string]string{"weight": "1"},
-			},
-			Ttl: 5,
-		})
-	if err != nil {
-		log.Panic(err)
-		return
-	}
-	server := NewRpcServer(fmt.Sprintf("0.0.0.0:%d", *port))
-	wg := sync.WaitGroup{}
-
-	wg.Add(1)
-	go func() {
-		server.Run()
-		wg.Done()
-	}()
-	wg.Add(1)
-	go func() {
-
-		registry.Register()
-		wg.Done()
-	}()
-
-	//stop the server after one minute
-	//go func() {
-	//	time.Sleep(time.Minute)
-	//	server.Stop()
-	//	registry.Deregister()
-	//}()
-
-	wg.Wait()
-}
-
-//go run server.go -node node1 -port 28544
-//go run server.go -node node2 -port 18562
-//go run server.go -node node3 -port 27772
+//go run main.go -node node1 -port 28544
+//go run main.go -node node2 -port 18562
+//go run main.go -node node3 -port 27772
 func main() {
 	flag.Parse()
-
-	testEtcd()
-	//testConsul()
+	StartService()
 }
