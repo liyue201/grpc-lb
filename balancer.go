@@ -1,7 +1,6 @@
 package grpclb
 
 import (
-	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
@@ -77,12 +76,6 @@ func (b *balancer) Start(target string, config grpc.BalancerConfig) error {
 		return grpc.ErrClientConnClosing
 	}
 	if b.r == nil {
-		// If there is no name resolver installed, it is not needed to
-		// do name resolution. In this case, target is added into b.addrs
-		// as the only address available and b.addrCh stays nil.
-
-		//???
-		//b.addrs = append(b.addrs, &AddrInfo{addr: grpc.Address{Addr: target}})
 		return nil
 	}
 	w, err := b.r.Resolve(target)
@@ -152,11 +145,7 @@ func (b *balancer) Get(ctx context.Context, opts grpc.BalancerGetOptions) (addr 
 
 		return
 	}
-	if !opts.BlockingWait {
-		err = fmt.Errorf("there is no address available")
-		b.mu.Unlock()
-		return
-	}
+
 	// Wait on b.waitCh for non-failfast RPCs.
 	if b.waitCh == nil {
 		ch = make(chan struct{})

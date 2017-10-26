@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	etcd "github.com/coreos/etcd/client"
+	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/liyue201/grpc-lb/examples/proto"
-	registry "github.com/liyue201/grpc-lb/registry/etcd"
+	registry "github.com/liyue201/grpc-lb/registry/etcd3"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
@@ -69,7 +69,7 @@ func StartService() {
 				Addr: fmt.Sprintf("127.0.0.1:%d", *port),
 				//Metadata: map[string]string{"weight": "1"},
 			},
-			Ttl: 10 * time.Second,
+			Ttl: 1000 * time.Second,
 		})
 	if err != nil {
 		log.Panic(err)

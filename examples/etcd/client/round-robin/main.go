@@ -8,11 +8,12 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
+	"time"
 )
 
 func main() {
 	etcdConfg := etcd.Config{
-		Endpoints: []string{"http://120.24.44.201:4001"},
+		Endpoints: []string{"http://120.24.44.201:2379"},
 	}
 	r := registry.NewResolver("/grpc-lb", "test", etcdConfg)
 	b := grpclb.NewBalancer(r, grpclb.NewRoundRobinSelector())
@@ -24,11 +25,13 @@ func main() {
 	defer c.Close()
 
 	client := proto.NewTestClient(c)
-	resp, err := client.Say(context.Background(), &proto.SayReq{Content: "round robin"})
-	if err != nil {
-		log.Println(err)
-		return
+	for i := 0; i < 5; i++ {
+		resp, err := client.Say(context.Background(), &proto.SayReq{Content: "round robin"})
+		if err != nil {
+			log.Println(err)
+			time.Sleep(time.Second)
+			continue
+		}
+		log.Printf(resp.Content)
 	}
-	log.Printf(resp.Content)
-
 }

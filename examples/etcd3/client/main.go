@@ -1,10 +1,10 @@
 package main
 
 import (
-	etcd "github.com/coreos/etcd/client"
+	etcd "github.com/coreos/etcd/clientv3"
 	grpclb "github.com/liyue201/grpc-lb"
 	"github.com/liyue201/grpc-lb/examples/proto"
-	registry "github.com/liyue201/grpc-lb/registry/etcd"
+	registry "github.com/liyue201/grpc-lb/registry/etcd3"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
@@ -16,8 +16,8 @@ func main() {
 		Endpoints: []string{"http://120.24.44.201:2379"},
 	}
 	r := registry.NewResolver("/grpc-lb", "test", etcdConfg)
-	b := grpclb.NewBalancer(r, grpclb.NewRandomSelector())
-	c, err := grpc.Dial("", grpc.WithInsecure(), grpc.WithBalancer(b))
+	b := grpclb.NewBalancer(r, grpclb.NewRoundRobinSelector())
+	c, err := grpc.Dial("", grpc.WithInsecure(), grpc.WithBalancer(b), grpc.WithTimeout(time.Second*5))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return
@@ -26,13 +26,15 @@ func main() {
 
 	client := proto.NewTestClient(c)
 
-	for i := 0; i < 5; i++ {
-		resp, err := client.Say(context.Background(), &proto.SayReq{Content: "random"})
+	for i := 0; i < 50; i++ {
+		resp, err := client.Say(context.Background(), &proto.SayReq{Content: "round robin"})
 		if err != nil {
-			log.Println(err)
+			log.Println("aa:", err)
 			time.Sleep(time.Second)
 			continue
 		}
+		time.Sleep(time.Second)
 		log.Printf(resp.Content)
 	}
+
 }

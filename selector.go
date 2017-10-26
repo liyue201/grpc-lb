@@ -48,7 +48,7 @@ func (b *baseSelector) Add(addr grpc.Address) error {
 		}
 	}
 
-	b.addrMap[addr.Addr] = &AddrInfo{addr: addr, weight: weight, connected: true}
+	b.addrMap[addr.Addr] = &AddrInfo{addr: addr, weight: weight, connected: false}
 
 	for i := 0; i < weight; i++ {
 		b.addrs = append(b.addrs, addr.Addr)
