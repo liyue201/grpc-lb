@@ -52,9 +52,9 @@ func (s *KetamaSelector) Add(addr grpc.Address) error {
 }
 
 func (s *KetamaSelector) Delete(addr grpc.Address) error {
+	a, ok := s.addrMap[addr.Addr]
 	err := s.baseSelector.Delete(addr)
 	if err == nil {
-		a, ok := s.addrMap[addr.Addr]
 		if ok {
 			for i := 0; i < a.weight; i++ {
 				s.hash.Remove(s.wrapAddr(addr.Addr, i))
