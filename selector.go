@@ -72,7 +72,7 @@ func (b *baseSelector) Delete(addr grpc.Address) error {
 			}
 		}
 	}
-	if firstIdx > 0 && lastIdx > 0 {
+	if firstIdx >= 0 && lastIdx >= 0 {
 		copy(b.addrs[firstIdx:], b.addrs[lastIdx+1:])
 		b.addrs = b.addrs[:len(b.addrs)-(lastIdx-firstIdx+1)]
 		delete(b.addrMap, addr.Addr)
