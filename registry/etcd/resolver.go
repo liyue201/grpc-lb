@@ -1,33 +1,72 @@
+
 package etcd
 
 import (
-	"errors"
 	"fmt"
-	etcd "github.com/coreos/etcd/client"
-	"google.golang.org/grpc/naming"
+	"google.golang.org/grpc/resolver"
+	etcd_cli "github.com/coreos/etcd/client"
+	"sync"
 )
 
-// EtcdResolver is an implementation of grpc.naming.Resolver
-type EtcdResolver struct {
-	Config      etcd.Config
-	RegistryDir string
-	ServiceName string
+const scheme = "etcd"
+var RegistryDir = "/grpclb"
+const EtcdTarget = "etcd:///test"
+
+type etcdResolver struct{
+	etcdConfig etcd_cli.Config
+	etcdWatchPath 	string
+	watcher *Watcher
+	target resolver.Target
+	cc     resolver.ClientConn
+	wg sync.WaitGroup
 }
 
-func NewResolver(registryDir, serviceName string, cfg etcd.Config) naming.Resolver {
-	return &EtcdResolver{RegistryDir: registryDir, ServiceName: serviceName, Config: cfg}
+func (r *etcdResolver) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOption) (resolver.Resolver, error) {
+	fmt.Printf("etcdResolver [Build]\n")
+	etcdCli, err := etcd_cli.New(r.etcdConfig)
+	if err != nil{
+		return  nil, err
+	}
+	r.target = target
+	r.cc = cc
+	r.watcher = newWatcher(r.etcdWatchPath, etcdCli)
+	r.start()
+	return r, nil
 }
 
-// Resolve to resolve the service from etcd
-func (er *EtcdResolver) Resolve(target string) (naming.Watcher, error) {
-	if er.ServiceName == "" {
-		return nil, errors.New("no service name provided")
-	}
-	client, err := etcd.New(er.Config)
-	if err != nil {
-		return nil, err
-	}
+func (*etcdResolver) Scheme() string {
+	fmt.Printf("etcdResolver [Scheme]\n")
+	return scheme
+}
 
-	key := fmt.Sprintf("%s/%s", er.RegistryDir, er.ServiceName)
-	return newEtcdWatcher(key, client), nil
+func (r *etcdResolver) start() {
+	r.wg.Add(1)
+	go func() {
+		defer r.wg.Done()
+		out := r.watcher.Watch()
+		for addr := range out {
+			fmt.Printf("[etcdResolver start] %v\n", addr)
+			r.cc.UpdateState(resolver.State{Addresses: addr})
+		}
+	}()
+}
+
+func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOption) {
+	fmt.Printf("etcdResolver [ResolveNow]\n")
+}
+
+func (r *etcdResolver) Close() {
+	fmt.Printf("etcdResolver [Close]\n")
+
+	r.watcher.Close()
+	r.wg.Wait()
+
+	fmt.Printf("etcdResolver [Close] ok \n")
+}
+
+func InitEtcdResolver(etcdConfig etcd_cli.Config, srvName, srvVersion string)  {
+	resolver.Register(&etcdResolver{
+		etcdConfig: etcdConfig,
+		etcdWatchPath: RegistryDir + "/" + srvName + "/" + srvVersion,
+	})
 }

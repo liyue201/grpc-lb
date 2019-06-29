@@ -10,7 +10,10 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -56,18 +59,19 @@ func (s *RpcServer) Say(ctx context.Context, req *proto.SayReq) (*proto.SayResp,
 
 func StartService() {
 	etcdConfg := etcd.Config{
-		Endpoints: []string{"http://120.24.44.201:2379"},
+		Endpoints: []string{"http://144.202.111.210:2379"},
 	}
 
-	registry, err := registry.NewRegistry(
+	registry, err := registry.NewRegistrar(
 		registry.Option{
 			EtcdConfig:  etcdConfg,
-			RegistryDir: "/grpc-lb",
-			ServiceName: "test",
+			RegistryDir: registry.RegistryDir,
+			ServiceName:  "test",
+			ServiceVersion:"v1.0",
 			NodeID:      *nodeID,
 			NData: registry.NodeData{
 				Addr: fmt.Sprintf("127.0.0.1:%d", *port),
-				//Metadata: map[string]string{"weight": "1"},
+				Metadata: map[string]string{"weight": "1"},
 			},
 			Ttl: 10 * time.Second,
 		})
@@ -90,12 +94,11 @@ func StartService() {
 		wg.Done()
 	}()
 
-	//stop the server after one minute
-	//go func() {
-	//	time.Sleep(time.Minute)
-	//	server.Stop()
-	//	registry.Deregister()
-	//}()
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	<-signalChan
+	registry.Deregister()
+	server.Stop()
 
 	wg.Wait()
 }

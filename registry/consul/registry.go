@@ -65,8 +65,8 @@ func (c *ConsulRegistry) Register() error {
 			Port:    c.cfg.NData.Port,
 			Tags:    tags,
 			Check: &consul.AgentServiceCheck{
-				TTL:    fmt.Sprintf("%ds", c.cfg.Ttl),
-				Status: consul.HealthPassing,
+				TTL:                            fmt.Sprintf("%ds", c.cfg.Ttl),
+				Status:                         consul.HealthPassing,
 				DeregisterCriticalServiceAfter: "1m",
 			}}
 		err := c.client.Agent().ServiceRegister(regis)

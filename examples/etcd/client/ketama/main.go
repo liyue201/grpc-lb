@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	etcd "github.com/coreos/etcd/client"
-	grpclb "github.com/liyue201/grpc-lb"
+	"github.com/liyue201/grpc-lb/balancer"
 	"github.com/liyue201/grpc-lb/examples/proto"
 	registry "github.com/liyue201/grpc-lb/registry/etcd"
 	"golang.org/x/net/context"
@@ -14,22 +14,24 @@ import (
 
 func main() {
 	etcdConfg := etcd.Config{
-		Endpoints: []string{"http://120.24.44.201:2379"},
+		Endpoints: []string{"http://144.202.111.210:2379"},
 	}
-	r := registry.NewResolver("/grpc-lb", "test", etcdConfg)
-	b := grpclb.NewBalancer(r, grpclb.NewKetamaSelector(grpclb.DefaultKetamaKey))
-	c, err := grpc.Dial("", grpc.WithInsecure(), grpc.WithBalancer(b), grpc.WithTimeout(time.Second))
+	balancer.InitConsistanceHashBuilder(balancer.DefaultConsistanceHashKey)
+	registry.InitEtcdResolver(etcdConfg, "test", "v1.0")
+
+	c, err := grpc.Dial(registry.EtcdTarget,  grpc.WithInsecure(), grpc.WithBalancerName(balancer.ConsistanceHash))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return
 	}
-	client := proto.NewTestClient(c)
+	defer c.Close()
 
-	for i := 0; i < 10; i++ {
+	client := proto.NewTestClient(c)
+	for i := 0; i < 100; i++ {
 		ctx := context.Background()
 
 		hashData := fmt.Sprintf("aaaa %d", i)
-		resp, err := client.Say(context.WithValue(ctx, grpclb.DefaultKetamaKey, hashData),
+		resp, err := client.Say(context.WithValue(ctx, balancer.DefaultConsistanceHashKey, hashData),
 			&proto.SayReq{Content: "ketama"})
 		if err != nil {
 			log.Println(err)
