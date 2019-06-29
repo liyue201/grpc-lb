@@ -1,33 +1,60 @@
 package etcd
 
 import (
-	"errors"
-	"fmt"
-	etcd3 "github.com/coreos/etcd/clientv3"
-	"google.golang.org/grpc/naming"
+	etcd_cli "go.etcd.io/etcd/clientv3"
+	"google.golang.org/grpc/resolver"
+	"sync"
 )
 
-// EtcdResolver is an implementation of grpc.naming.Resolver
-type EtcdResolver struct {
-	Config      etcd3.Config
-	RegistryDir string
-	ServiceName string
+const scheme = "etcd3"
+const EtcdTarget = "etcd3:///test"
+var RegistryDir = "/grpclb"
+
+type etcdResolver struct {
+	etcdConfig    etcd_cli.Config
+	etcdWatchPath string
+	watcher       *Watcher
+	cc            resolver.ClientConn
+	wg            sync.WaitGroup
 }
 
-func NewResolver(registryDir, serviceName string, cfg etcd3.Config) naming.Resolver {
-	return &EtcdResolver{RegistryDir: registryDir, ServiceName: serviceName, Config: cfg}
-}
-
-// Resolve to resolve the service from etcd
-func (er *EtcdResolver) Resolve(target string) (naming.Watcher, error) {
-	if er.ServiceName == "" {
-		return nil, errors.New("no service name provided")
-	}
-	client, err := etcd3.New(er.Config)
+func (r *etcdResolver) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOption) (resolver.Resolver, error) {
+	etcdCli, err := etcd_cli.New(r.etcdConfig)
 	if err != nil {
 		return nil, err
 	}
+	r.cc = cc
+	r.watcher = newWatcher(r.etcdWatchPath, etcdCli)
+	r.start()
+	return r, nil
+}
 
-	key := fmt.Sprintf("%s/%s", er.RegistryDir, er.ServiceName)
-	return newEtcdWatcher(key, client), nil
+func (*etcdResolver) Scheme() string {
+	return scheme
+}
+
+func (r *etcdResolver) start() {
+	r.wg.Add(1)
+	go func() {
+		defer r.wg.Done()
+		out := r.watcher.Watch()
+		for addr := range out {
+			r.cc.UpdateState(resolver.State{Addresses: addr})
+		}
+	}()
+}
+
+func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOption) {
+}
+
+func (r *etcdResolver) Close() {
+	r.watcher.Close()
+	r.wg.Wait()
+}
+
+func InitEtcdResolver(etcdConfig etcd_cli.Config, srvName, srvVersion string) {
+	resolver.Register(&etcdResolver{
+		etcdConfig:    etcdConfig,
+		etcdWatchPath: RegistryDir + "/" + srvName + "/" + srvVersion,
+	})
 }

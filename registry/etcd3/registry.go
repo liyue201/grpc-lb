@@ -2,14 +2,15 @@ package etcd
 
 import (
 	"encoding/json"
-	etcd3 "github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
+	"fmt"
+	etcd3 "go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
 	"time"
 )
 
-type EtcdReigistry struct {
+type Registrar struct {
 	etcd3Client *etcd3.Client
 	key         string
 	value       string
@@ -19,12 +20,13 @@ type EtcdReigistry struct {
 }
 
 type Option struct {
-	EtcdConfig  etcd3.Config
-	RegistryDir string
-	ServiceName string
-	NodeID      string
-	NData       NodeData
-	Ttl         time.Duration
+	EtcdConfig     etcd3.Config
+	RegistryDir    string
+	ServiceName    string
+	ServiceServion string
+	NodeID         string
+	NData          NodeData
+	Ttl            time.Duration
 }
 
 type NodeData struct {
@@ -32,7 +34,7 @@ type NodeData struct {
 	Metadata map[string]string
 }
 
-func NewRegistry(option Option) (*EtcdReigistry, error) {
+func NewRegistrar(option Option) (*Registrar, error) {
 	client, err := etcd3.New(option.EtcdConfig)
 	if err != nil {
 		return nil, err
@@ -44,35 +46,39 @@ func NewRegistry(option Option) (*EtcdReigistry, error) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	registry := &EtcdReigistry{
+	registry := &Registrar{
 		etcd3Client: client,
-		key:         option.RegistryDir + "/" + option.ServiceName + "/" + option.NodeID,
+		key:         option.RegistryDir + "/" + option.ServiceName + "/" + option.ServiceServion + "/" + option.NodeID,
 		value:       string(val),
-		ttl:         option.Ttl,
+		ttl:         option.Ttl / time.Second,
 		ctx:         ctx,
 		cancel:      cancel,
 	}
 	return registry, nil
 }
 
-func (e *EtcdReigistry) Register() error {
+func (e *Registrar) Register() error {
 
 	insertFunc := func() error {
-		resp, _ := e.etcd3Client.Grant(e.ctx, int64(e.ttl))
-		_, err := e.etcd3Client.Get(e.ctx, e.key)
+		resp, err := e.etcd3Client.Grant(e.ctx, int64(e.ttl))
+		if err != nil {
+			fmt.Printf("[Register] %v\n", err.Error())
+			return err
+		}
+		_, err = e.etcd3Client.Get(e.ctx, e.key)
 		if err != nil {
 			if err == rpctypes.ErrKeyNotFound {
 				if _, err := e.etcd3Client.Put(e.ctx, e.key, e.value, etcd3.WithLease(resp.ID)); err != nil {
-					grpclog.Printf("grpclb: set key '%s' with ttl to etcd3 failed: %s", e.key, err.Error())
+					grpclog.Infof("grpclb: set key '%s' with ttl to etcd3 failed: %s", e.key, err.Error())
 				}
 			} else {
-				grpclog.Printf("grpclb: key '%s' connect to etcd3 failed: %s", e.key, err.Error())
+				grpclog.Infof("grpclb: key '%s' connect to etcd3 failed: %s", e.key, err.Error())
 			}
 			return err
 		} else {
 			// refresh set to true for not notifying the watcher
 			if _, err := e.etcd3Client.Put(e.ctx, e.key, e.value, etcd3.WithLease(resp.ID)); err != nil {
-				grpclog.Printf("grpclb: refresh key '%s' with ttl to etcd3 failed: %s", e.key, err.Error())
+				grpclog.Infof("grpclb: refresh key '%s' with ttl to etcd3 failed: %s", e.key, err.Error())
 				return err
 			}
 		}
@@ -92,7 +98,7 @@ func (e *EtcdReigistry) Register() error {
 		case <-e.ctx.Done():
 			ticker.Stop()
 			if _, err := e.etcd3Client.Delete(context.Background(), e.key); err != nil {
-				grpclog.Printf("grpclb: deregister '%s' failed: %s", e.key, err.Error())
+				grpclog.Infof("grpclb: deregister '%s' failed: %s", e.key, err.Error())
 			}
 			return nil
 		}
@@ -101,7 +107,7 @@ func (e *EtcdReigistry) Register() error {
 	return nil
 }
 
-func (e *EtcdReigistry) Deregister() error {
+func (e *Registrar) Deregister() error {
 	e.cancel()
 	return nil
 }

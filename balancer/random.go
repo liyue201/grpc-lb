@@ -48,20 +48,17 @@ func (*randomPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn
 
 	return &randomPicker{
 		subConns: scs,
-		next:     rand.Intn(len(scs)),
 	}
 }
 
 type randomPicker struct {
 	subConns []balancer.SubConn
 	mu   sync.Mutex
-	next int
 }
 
 func (p *randomPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
 	p.mu.Lock()
-	sc := p.subConns[p.next]
-	p.next = rand.Intn(len(p.subConns))
+	sc := p.subConns[rand.Intn(len(p.subConns))]
 	p.mu.Unlock()
 	return sc, nil, nil
 }

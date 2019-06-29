@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"time"
-	 "github.com/liyue201/grpc-lb/balancer"
+	"github.com/liyue201/grpc-lb/balancer"
 )
 
 func main() {

@@ -3,14 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	etcd "github.com/coreos/etcd/clientv3"
+	etcd "go.etcd.io/etcd/clientv3"
 	"github.com/liyue201/grpc-lb/examples/proto"
 	registry "github.com/liyue201/grpc-lb/registry/etcd3"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -56,20 +59,21 @@ func (s *RpcServer) Say(ctx context.Context, req *proto.SayReq) (*proto.SayResp,
 
 func StartService() {
 	etcdConfg := etcd.Config{
-		Endpoints: []string{"http://127.0.0.1:2379"},
+		Endpoints: []string{"http://144.202.111.210:2379"},
 	}
 
-	registry, err := registry.NewRegistry(
+	registrar, err := registry.NewRegistrar(
 		registry.Option{
 			EtcdConfig:  etcdConfg,
-			RegistryDir: "/grpc-lb",
+			RegistryDir: registry.RegistryDir,
 			ServiceName: "test",
+			ServiceServion: "v1.0",
 			NodeID:      *nodeID,
 			NData: registry.NodeData{
 				Addr: fmt.Sprintf("127.0.0.1:%d", *port),
 				//Metadata: map[string]string{"weight": "1"},
 			},
-			Ttl: 1000 * time.Second,
+			Ttl: 10 * time.Second,
 		})
 	if err != nil {
 		log.Panic(err)
@@ -86,17 +90,15 @@ func StartService() {
 
 	wg.Add(1)
 	go func() {
-		registry.Register()
+		registrar.Register()
 		wg.Done()
 	}()
 
-	//stop the server after one minute
-	//go func() {
-	//	time.Sleep(time.Minute)
-	//	server.Stop()
-	//	registry.Deregister()
-	//}()
-
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	<-signalChan
+	registrar.Deregister()
+	server.Stop()
 	wg.Wait()
 }
 
