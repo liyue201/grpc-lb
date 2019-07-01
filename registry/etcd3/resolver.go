@@ -6,11 +6,10 @@ import (
 	"sync"
 )
 
-const scheme = "etcd3"
-const EtcdTarget = "etcd3:///test"
 var RegistryDir = "/grpclb"
 
 type etcdResolver struct {
+	scheme 		string
 	etcdConfig    etcd_cli.Config
 	etcdWatchPath string
 	watcher       *Watcher
@@ -29,8 +28,8 @@ func (r *etcdResolver) Build(target resolver.Target, cc resolver.ClientConn, opt
 	return r, nil
 }
 
-func (*etcdResolver) Scheme() string {
-	return scheme
+func (r *etcdResolver) Scheme() string {
+	return r.scheme
 }
 
 func (r *etcdResolver) start() {
@@ -52,8 +51,9 @@ func (r *etcdResolver) Close() {
 	r.wg.Wait()
 }
 
-func InitEtcdResolver(etcdConfig etcd_cli.Config, srvName, srvVersion string) {
+func RegisterResolver(scheme string, etcdConfig etcd_cli.Config, srvName, srvVersion string) {
 	resolver.Register(&etcdResolver{
+		scheme:        scheme,
 		etcdConfig:    etcdConfig,
 		etcdWatchPath: RegistryDir + "/" + srvName + "/" + srvVersion,
 	})

@@ -61,8 +61,8 @@ func (w *Watcher) Watch() chan []resolver.Address {
 			close(out)
 			w.wg.Done()
 		}()
-		addrs := w.GetAllAddresses()
-		out <- w.cloneAddresses(addrs)
+		w.addrs = w.GetAllAddresses()
+		out <- w.cloneAddresses(w.addrs)
 
 		rch := w.client.Watch(w.ctx, w.key, etcd3.WithPrefix())
 		for wresp := range rch {

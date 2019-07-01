@@ -45,7 +45,6 @@ func newWatcher(key string, cli etcd_cli.Client) *Watcher {
 func (w * Watcher) GetAllAddresses() []resolver.Address {
 	resp, _ := w.keyapi.Get(w.ctx, w.key, &etcd_cli.GetOptions{Recursive: true})
 	addrs := []resolver.Address{}
-
 	for _, n := range resp.Node.Nodes {
 		nodeData := NodeData{}
 
@@ -63,7 +62,7 @@ func (w * Watcher) GetAllAddresses() []resolver.Address {
 	return addrs
 }
 
-func (w *Watcher) Watch() (chan []resolver.Address) {
+func (w *Watcher) Watch() chan []resolver.Address {
 	out := make(chan []resolver.Address, 10)
 	w.wg.Add(1)
 	go func() {
@@ -72,8 +71,8 @@ func (w *Watcher) Watch() (chan []resolver.Address) {
 			w.wg.Done()
 		}()
 
-		addrs := w.GetAllAddresses()
-		out <- w.cloneAddresses(addrs)
+		w.addrs = w.GetAllAddresses()
+		out <- w.cloneAddresses(w.addrs)
 
 		for {
 			resp, err := w.watcher.Next(w.ctx)

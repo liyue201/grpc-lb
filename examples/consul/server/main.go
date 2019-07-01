@@ -10,7 +10,10 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 )
 
 var nodeID = flag.String("node", "node1", "node ID")
@@ -55,18 +58,18 @@ func (s *RpcServer) Say(ctx context.Context, req *proto.SayReq) (*proto.SayResp,
 
 func StartService() {
 	config := &capi.Config{
-		Address: "http://120.24.44.201:8500",
+		Address: "http://144.202.111.210:8500",
 	}
 
-	registry, err := consul.NewRegistry(
+	registry, err := consul.NewRegistrar(
 		&consul.Congfig{
 			ConsulCfg:   config,
-			ServiceName: "test",
+			ServiceName: "test_v1.0",
 			NData: consul.NodeData{
 				ID:      *nodeID,
 				Address: "127.0.0.1",
 				Port:    *port,
-				//Metadata: map[string]string{"weight": "1"},
+				Metadata: map[string]string{"weight": "1"},
 			},
 			Ttl: 5,
 		})
@@ -88,13 +91,11 @@ func StartService() {
 		wg.Done()
 	}()
 
-	//stop the server after one minute
-	//go func() {
-	//	time.Sleep(time.Minute)
-	//	server.Stop()
-	//	registry.Deregister()
-	//}()
-
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	<-signalChan
+	registry.Deregister()
+	server.Stop()
 	wg.Wait()
 }
 

@@ -17,9 +17,9 @@ func main() {
 		Endpoints: []string{"http://144.202.111.210:2379"},
 	}
 	balancer.InitConsistanceHashBuilder(balancer.DefaultConsistanceHashKey)
-	registry.InitEtcdResolver(etcdConfg, "test", "v1.0")
+	registry.RegisterResolver("etcd", etcdConfg, "test", "v1.0")
 
-	c, err := grpc.Dial(registry.EtcdTarget,  grpc.WithInsecure(), grpc.WithBalancerName(balancer.ConsistanceHash))
+	c, err := grpc.Dial("etcd:///",  grpc.WithInsecure(), grpc.WithBalancerName(balancer.ConsistanceHash))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return

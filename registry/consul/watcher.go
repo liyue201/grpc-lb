@@ -1,25 +1,29 @@
 package consul
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/naming"
+	"google.golang.org/grpc/resolver"
 	"sync"
 )
 
-// ConsulWatcher is the implementation of grpc.naming.Watcher
 type ConsulWatcher struct {
 	sync.RWMutex
+	consulConf  *api.Config
 	serviceName string
 	wp          *watch.Plan
-	updates     chan []*naming.Update
-	addrs       []*naming.Update
+	ctx         context.Context
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
+	addrs       []resolver.Address
+	addrsChan   chan []resolver.Address
 }
 
-func newConsulWatcher(serviceName string, address string) naming.Watcher {
+func newConsulWatcher(serviceName string, conf *api.Config) *ConsulWatcher {
 	wp, err := watch.Parse(map[string]interface{}{
 		"type":    "service",
 		"service": serviceName,
@@ -28,28 +32,25 @@ func newConsulWatcher(serviceName string, address string) naming.Watcher {
 	if err != nil {
 		return nil
 	}
-
 	w := &ConsulWatcher{
 		serviceName: serviceName,
 		wp:          wp,
-		updates:     make(chan []*naming.Update),
+		consulConf:  conf,
+		addrsChan:   make(chan []resolver.Address, 10),
 	}
 	wp.Handler = w.handle
-	go wp.Run(address)
+
 	return w
 }
 
 func (w *ConsulWatcher) Close() {
 	w.wp.Stop()
-	close(w.updates)
+	w.wg.Wait()
 }
 
-func (w *ConsulWatcher) Next() ([]*naming.Update, error) {
-	select {
-	case updates := <-w.updates:
-		return updates, nil
-	}
-	return []*naming.Update{}, nil
+func (w *ConsulWatcher) Watch() chan []resolver.Address {
+	go w.wp.RunWithConfig(w.consulConf.Address, w.consulConf)
+	return w.addrsChan
 }
 
 func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
@@ -58,7 +59,7 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 		return
 	}
 
-	addrs := []*naming.Update{}
+	addrs := []resolver.Address{}
 
 	for _, e := range entries {
 		for _, check := range e.Checks {
@@ -69,48 +70,40 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 					if len(e.Service.Tags) > 0 {
 						err := json.Unmarshal([]byte(e.Service.Tags[0]), &metadata)
 						if err != nil {
-							grpclog.Println("Parse node data error:", err)
+							grpclog.Infof("Parse node data error:", err)
 						}
 					}
-					addrs = append(addrs, &naming.Update{Addr: addr, Metadata: &metadata})
+					addrs = append(addrs, resolver.Address{Addr: addr, Metadata: &metadata})
 				}
 				break
 			}
 		}
 	}
-
-	updates := []*naming.Update{}
-
-	//add new address
-	for _, newAddr := range addrs {
+	if len(addrs) != len(w.addrs) {
+		w.addrs = addrs
+		w.addrsChan <- w.cloneAddresses(w.addrs)
+		return
+	}
+	for _, addr1 := range addrs {
 		found := false
-		for _, oldAddr := range w.addrs {
-			if newAddr.Addr == oldAddr.Addr {
+		for _, addr2 := range w.addrs {
+			if addr1.Addr == addr2.Addr {
 				found = true
 				break
 			}
 		}
 		if !found {
-			newAddr.Op = naming.Add
-			updates = append(updates, newAddr)
+			w.addrs = addrs
+			w.addrsChan <- w.cloneAddresses(w.addrs)
+			return
 		}
 	}
+}
 
-	//delete old address
-	for _, oldAddr := range w.addrs {
-		found := false
-		for _, addr := range addrs {
-			if addr.Addr == oldAddr.Addr {
-				found = true
-				break
-			}
-		}
-		if !found {
-			oldAddr.Op = naming.Delete
-			updates = append(updates, oldAddr)
-		}
+func (w *ConsulWatcher) cloneAddresses(in []resolver.Address) []resolver.Address {
+	out := make([]resolver.Address, len(in))
+	for i := 0; i < len(in); i++ {
+		out[i] = in[i]
 	}
-	w.addrs = addrs
-
-	w.updates <- updates
+	return out
 }

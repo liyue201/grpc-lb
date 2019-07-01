@@ -1,27 +1,54 @@
 package consul
 
 import (
-	"errors"
-	"google.golang.org/grpc/naming"
+	con_api "github.com/hashicorp/consul/api"
+	"google.golang.org/grpc/resolver"
+	"sync"
 )
 
-// ConsulResolver is the implementaion of grpc.naming.Resolver
-type ConsulResolver struct {
-	serviceName string
-	consulAddr  string
+type consulResolver struct {
+	scheme      string
+	consulConf  *con_api.Config
+	ServiceName string
+	watcher     *ConsulWatcher
+	cc          resolver.ClientConn
+	wg          sync.WaitGroup
 }
 
-// NewResolver return ConsulResolver with service name
-func NewResolver(serviceName string, consulAddr string) *ConsulResolver {
-	return &ConsulResolver{serviceName: serviceName, consulAddr: consulAddr}
+func (r *consulResolver) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOption) (resolver.Resolver, error) {
+	r.cc = cc
+	r.watcher = newConsulWatcher(r.ServiceName, r.consulConf)
+	r.start()
+	return r, nil
 }
 
-// Resolve to resolve the service from consul
-func (c *ConsulResolver) Resolve(target string) (naming.Watcher, error) {
-	if c.serviceName == "" {
-		return nil, errors.New("no service name provided")
-	}
-	// return ConsulWatcher
-	watcher := newConsulWatcher(c.serviceName, c.consulAddr)
-	return watcher, nil
+func (r *consulResolver) Scheme() string {
+	return r.scheme
+}
+
+func (r *consulResolver) start() {
+	r.wg.Add(1)
+	go func() {
+		defer r.wg.Done()
+		out := r.watcher.Watch()
+		for addr := range out {
+			r.cc.UpdateState(resolver.State{Addresses: addr})
+		}
+	}()
+}
+
+func (r *consulResolver) ResolveNow(o resolver.ResolveNowOption) {
+}
+
+func (r *consulResolver) Close() {
+	r.watcher.Close()
+	r.wg.Wait()
+}
+
+func RegisterResolver(scheme string, consulConf *con_api.Config, srvName string) {
+	resolver.Register(&consulResolver{
+		scheme:      scheme,
+		consulConf:  consulConf,
+		ServiceName: srvName,
+	})
 }

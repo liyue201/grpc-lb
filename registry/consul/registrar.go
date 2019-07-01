@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type ConsulRegistry struct {
+type Registrar struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	client  *consul.Client
@@ -31,14 +31,14 @@ type NodeData struct {
 	Metadata map[string]string
 }
 
-func NewRegistry(cfg *Congfig) (*ConsulRegistry, error) {
+func NewRegistrar(cfg *Congfig) (*Registrar, error) {
 	c, err := consul.NewClient(cfg.ConsulCfg)
 	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return &ConsulRegistry{
+	return &Registrar{
 		ctx:     ctx,
 		cancel:  cancel,
 		client:  c,
@@ -47,7 +47,7 @@ func NewRegistry(cfg *Congfig) (*ConsulRegistry, error) {
 	}, nil
 }
 
-func (c *ConsulRegistry) Register() error {
+func (c *Registrar) Register() error {
 
 	// register service
 	metadata, err := json.Marshal(c.cfg.NData.Metadata)
@@ -94,12 +94,12 @@ func (c *ConsulRegistry) Register() error {
 		case <-keepAliveTicker.C:
 			err := c.client.Agent().PassTTL(c.checkId, "")
 			if err != nil {
-				grpclog.Printf("consul registry check %v.\n", err)
+				grpclog.Infof("consul registry check %v.\n", err)
 			}
 		case <-registerTicker.C:
 			err = register()
 			if err != nil {
-				grpclog.Printf("consul register service error: %v.\n", err)
+				grpclog.Infof("consul register service error: %v.\n", err)
 			}
 		}
 	}
@@ -107,7 +107,7 @@ func (c *ConsulRegistry) Register() error {
 	return nil
 }
 
-func (c *ConsulRegistry) Deregister() error {
+func (c *Registrar) Deregister() error {
 	c.cancel()
 	return nil
 }
