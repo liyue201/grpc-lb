@@ -58,7 +58,6 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 	if !ok {
 		return
 	}
-
 	addrs := []resolver.Address{}
 
 	for _, e := range entries {
@@ -79,24 +78,9 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 			}
 		}
 	}
-	if len(addrs) != len(w.addrs) {
+	if !isSameAddrs(w.addrs, addrs) {
 		w.addrs = addrs
 		w.addrsChan <- w.cloneAddresses(w.addrs)
-		return
-	}
-	for _, addr1 := range addrs {
-		found := false
-		for _, addr2 := range w.addrs {
-			if addr1.Addr == addr2.Addr {
-				found = true
-				break
-			}
-		}
-		if !found {
-			w.addrs = addrs
-			w.addrsChan <- w.cloneAddresses(w.addrs)
-			return
-		}
 	}
 }
 
@@ -106,4 +90,23 @@ func (w *ConsulWatcher) cloneAddresses(in []resolver.Address) []resolver.Address
 		out[i] = in[i]
 	}
 	return out
+}
+
+func isSameAddrs(addrs1, addrs2 []resolver.Address) bool  {
+	if len(addrs1) != len(addrs2) {
+		return false
+	}
+	for _, addr1 := range addrs1 {
+		found := false
+		for _, addr2 := range addrs2 {
+			if addr1.Addr == addr2.Addr {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }

@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"time"
 )
-
+ 
 type Registrar struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
@@ -107,7 +107,7 @@ func (c *Registrar) Register() error {
 	return nil
 }
 
-func (c *Registrar) Deregister() error {
+func (c *Registrar) Unregister() error {
 	c.cancel()
 	return nil
 }

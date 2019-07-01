@@ -7,8 +7,6 @@ import (
 	"sync"
 )
 
-var RegistryDir = "/grpclb"
-
 type etcdResolver struct{
 	scheme string
 	etcdConfig etcd_cli.Config

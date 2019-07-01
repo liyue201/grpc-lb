@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var RegistryDir = "/grpclb"
+
 type Registrar struct {
 	etcd3Client *etcd3.Client
 	key         string
@@ -23,7 +25,7 @@ type Option struct {
 	EtcdConfig     etcd3.Config
 	RegistryDir    string
 	ServiceName    string
-	ServiceServion string
+	ServiceVersion string
 	NodeID         string
 	NData          NodeData
 	Ttl            time.Duration
@@ -48,7 +50,7 @@ func NewRegistrar(option Option) (*Registrar, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	registry := &Registrar{
 		etcd3Client: client,
-		key:         option.RegistryDir + "/" + option.ServiceName + "/" + option.ServiceServion + "/" + option.NodeID,
+		key:         option.RegistryDir + "/" + option.ServiceName + "/" + option.ServiceVersion + "/" + option.NodeID,
 		value:       string(val),
 		ttl:         option.Ttl / time.Second,
 		ctx:         ctx,
@@ -107,7 +109,7 @@ func (e *Registrar) Register() error {
 	return nil
 }
 
-func (e *Registrar) Deregister() error {
+func (e *Registrar) Unregister() error {
 	e.cancel()
 	return nil
 }

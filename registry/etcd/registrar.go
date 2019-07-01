@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+var RegistryDir = "/grpclb"
+
 type Registrar struct {
 	keyapi etcd_cli.KeysAPI
 	key    string
@@ -97,7 +99,7 @@ func (e *Registrar) Register() error {
 	return nil
 }
 
-func (e *Registrar) Deregister() error {
+func (e *Registrar) Unregister() error {
 	e.cancel()
 	return nil
 }

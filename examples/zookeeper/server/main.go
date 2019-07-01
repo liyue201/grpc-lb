@@ -3,9 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	etcd "go.etcd.io/etcd/clientv3"
 	"github.com/liyue201/grpc-lb/examples/proto"
-	registry "github.com/liyue201/grpc-lb/registry/etcd3"
+	registry "github.com/liyue201/grpc-lb/registry/zookeeper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
@@ -58,22 +57,18 @@ func (s *RpcServer) Say(ctx context.Context, req *proto.SayReq) (*proto.SayResp,
 }
 
 func StartService() {
-	etcdConfg := etcd.Config{
-		Endpoints: []string{"http://144.202.111.210:2379"},
-	}
-
 	registrar, err := registry.NewRegistrar(
 		registry.Option{
-			EtcdConfig:  etcdConfg,
+			ZkServers: []string{"144.202.111.210:2189"},
 			RegistryDir: registry.RegistryDir,
 			ServiceName: "test",
 			ServiceVersion: "v1.0",
 			NodeID:      *nodeID,
 			NData: registry.NodeData{
 				Addr: fmt.Sprintf("127.0.0.1:%d", *port),
-				//Metadata: map[string]string{"weight": "1"},
+				Metadata: map[string]string{"weight": "1"},
 			},
-			Ttl: 10 * time.Second,
+			SessionTimeout: time.Second,
 		})
 	if err != nil {
 		log.Panic(err)

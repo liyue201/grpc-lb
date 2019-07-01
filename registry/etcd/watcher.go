@@ -10,7 +10,6 @@ import (
 	"sync"
 )
 
-// EtcdWatcher is the implementation of grpc.naming.Watcher
 type Watcher struct {
 	key     string
 	keyapi  etcd_cli.KeysAPI
