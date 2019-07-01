@@ -11,33 +11,33 @@ import (
 	"sync"
 )
 
-const ConsistanceHash = "consistance_hash"
+const ConsistentHash = "consistent_hash"
 
-var DefaultConsistanceHashKey = "consistance-hash"
+var DefaultConsistentHashKey = "consistent-hash"
 
-func InitConsistanceHashBuilder(consistanceHashKey string) {
-	balancer.Register(newConsistanceHashBuilder(consistanceHashKey))
+func InitConsistentHashBuilder(consistanceHashKey string) {
+	balancer.Register(newConsistentHashBuilder(consistanceHashKey))
 }
 
 // newConsistanceHashBuilder creates a new ConsistanceHash balancer builder.
-func newConsistanceHashBuilder(consistanceHashKey string) balancer.Builder {
-	return base.NewBalancerBuilderWithConfig(ConsistanceHash, &consistanceHashPickerBuilder{consistanceHashKey}, base.Config{HealthCheck: true})
+func newConsistentHashBuilder(consistentHashKey string) balancer.Builder {
+	return base.NewBalancerBuilderWithConfig(ConsistentHash, &consistentHashPickerBuilder{consistentHashKey}, base.Config{HealthCheck: true})
 }
 
-type consistanceHashPickerBuilder struct {
-	consistanceHashKey string
+type consistentHashPickerBuilder struct {
+	consistentHashKey string
 }
 
-func (b *consistanceHashPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn) balancer.Picker {
-	grpclog.Infof("consistanceHashPicker: newPicker called with readySCs: %v", readySCs)
+func (b *consistentHashPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn) balancer.Picker {
+	grpclog.Infof("consistentHashPicker: newPicker called with readySCs: %v", readySCs)
 	if len(readySCs) == 0 {
 		return base.NewErrPicker(balancer.ErrNoSubConnAvailable)
 	}
 
-	picker := &consistanceHashPicker{
+	picker := &consistentHashPicker{
 		subConns:           make(map[string]balancer.SubConn),
 		hash:               NewKetama(10, nil),
-		consistanceHashKey: b.consistanceHashKey,
+		consistentHashKey:  b.consistentHashKey,
 	}
 
 	for addr, sc := range readySCs {
@@ -59,17 +59,17 @@ func (b *consistanceHashPickerBuilder) Build(readySCs map[resolver.Address]balan
 	return picker
 }
 
-type consistanceHashPicker struct {
+type consistentHashPicker struct {
 	subConns           map[string]balancer.SubConn
 	hash               *Ketama
-	consistanceHashKey string
+	consistentHashKey  string
 	mu                 sync.Mutex
 }
 
-func (p *consistanceHashPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
+func (p *consistentHashPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
 	var sc balancer.SubConn
 	p.mu.Lock()
-	key, ok := ctx.Value(p.consistanceHashKey).(string)
+	key, ok := ctx.Value(p.consistentHashKey).(string)
 	if ok {
 		targetAddr, ok := p.hash.Get(key)
 		if ok {

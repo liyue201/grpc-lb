@@ -16,10 +16,10 @@ func main() {
 	etcdConfg := etcd.Config{
 		Endpoints: []string{"http://144.202.111.210:2379"},
 	}
-	balancer.InitConsistanceHashBuilder(balancer.DefaultConsistanceHashKey)
+	balancer.InitConsistentHashBuilder(balancer.DefaultConsistentHashKey)
 	registry.RegisterResolver("etcd", etcdConfg, "test", "v1.0")
 
-	c, err := grpc.Dial("etcd:///",  grpc.WithInsecure(), grpc.WithBalancerName(balancer.ConsistanceHash))
+	c, err := grpc.Dial("etcd:///",  grpc.WithInsecure(), grpc.WithBalancerName(balancer.ConsistentHash))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return
@@ -31,7 +31,7 @@ func main() {
 		ctx := context.Background()
 
 		hashData := fmt.Sprintf("aaaa %d", i)
-		resp, err := client.Say(context.WithValue(ctx, balancer.DefaultConsistanceHashKey, hashData),
+		resp, err := client.Say(context.WithValue(ctx, balancer.DefaultConsistentHashKey, hashData),
 			&proto.SayReq{Content: "ketama"})
 		if err != nil {
 			log.Println(err)
