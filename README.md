@@ -7,7 +7,7 @@ This is a gRPC load balancer for go.
 - supports Random,RoundRobin and consistent-hash strategies.
 - supports [etcd](https://github.com/etcd-io/etcd),[consul](https://github.com/consul/consul) and [zookeeper](https://github.com/apache/zookeeper) as registry.
 
-## example
+## Example
 
 ``` go
 package main
@@ -51,3 +51,4 @@ func main() {
 }
 
 ```
+see more [examples](/examples)
