@@ -5,7 +5,7 @@ This is a gRPC load balancer for go.
  
 ## Feature
 - supports Random,RoundRobin and consistent-hash strategies.
-- supports [ETCD](https://github.com/etcd-io/etcd),[consul](https://github.com/consul/consul) and [zookeeper](https://github.com/apache/zookeeper) as registry.
+- supports [etcd](https://github.com/etcd-io/etcd),[consul](https://github.com/consul/consul) and [zookeeper](https://github.com/apache/zookeeper) as registry.
 
 ## example
 
