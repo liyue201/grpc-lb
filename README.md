@@ -1,5 +1,5 @@
 # grpc-lb
-This is a gRPC load balancer for go.
+This is a gRPC load balancing library for go.
 
  ![](/struct.png)
  
