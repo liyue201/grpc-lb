@@ -35,19 +35,21 @@ func (b *consistentHashPickerBuilder) Build(readySCs map[resolver.Address]balanc
 	}
 
 	picker := &consistentHashPicker{
-		subConns:           make(map[string]balancer.SubConn),
-		hash:               NewKetama(10, nil),
-		consistentHashKey:  b.consistentHashKey,
+		subConns:          make(map[string]balancer.SubConn),
+		hash:              NewKetama(10, nil),
+		consistentHashKey: b.consistentHashKey,
 	}
 
 	for addr, sc := range readySCs {
 		weight := 1
-		m, ok := addr.Metadata.(*map[string]string)
-		w, ok := (*m)["weight"]
-		if ok {
-			n, err := strconv.Atoi(w)
-			if err == nil && n > 0 {
-				weight = n
+		if addr.Metadata != nil {
+			if m, ok := addr.Metadata.(*map[string]string); ok {
+				if w, ok := (*m)["weight"]; ok {
+					n, err := strconv.Atoi(w)
+					if err == nil && n > 0 {
+						weight = n
+					}
+				}
 			}
 		}
 		for i := 0; i < weight; i++ {
@@ -60,10 +62,10 @@ func (b *consistentHashPickerBuilder) Build(readySCs map[resolver.Address]balanc
 }
 
 type consistentHashPicker struct {
-	subConns           map[string]balancer.SubConn
-	hash               *Ketama
-	consistentHashKey  string
-	mu                 sync.Mutex
+	subConns          map[string]balancer.SubConn
+	hash              *Ketama
+	consistentHashKey string
+	mu                sync.Mutex
 }
 
 func (p *consistentHashPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
