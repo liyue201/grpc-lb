@@ -15,14 +15,12 @@ type Watcher struct {
 	conn      *zk.Conn
 	path      string
 	addrs     []resolver.Address
-	addrsChan chan []resolver.Address
 	wg        sync.WaitGroup
 }
 
 func newWatcher(zkServers []string, path string) (*Watcher, error) {
 	w := &Watcher{
 		zkServers: zkServers,
-		addrsChan: make(chan []resolver.Address, 10),
 		path:      path,
 	}
 	c, _, err := zk.Connect(zkServers, time.Second*15)
@@ -38,12 +36,16 @@ func (w *Watcher) Watch() chan []resolver.Address {
 		err := w.createPath(w.path)
 		if err != nil {
 			grpclog.Infof("Watcher create path error, %v", err)
-			return w.addrsChan
+			return nil
 		}
 	}
+	addrChan := make(chan []resolver.Address, 10)
 	w.wg.Add(1)
 	go func() {
-		defer w.wg.Done()
+		defer func() {
+			w.wg.Done()
+			close(addrChan)
+		}()
 		for {
 			children, _, eventCh, err := w.conn.ChildrenW(w.path)
 			if err != nil {
@@ -67,14 +69,14 @@ func (w *Watcher) Watch() chan []resolver.Address {
 
 			if !isSameAddrs(w.addrs, addrs) {
 				w.addrs = addrs
-				w.addrsChan <- w.cloneAddresses(addrs)
+				addrChan <- w.cloneAddresses(addrs)
 			}
 			for range eventCh {
 				//do nothing
 			}
 		}
 	}()
-	return w.addrsChan
+	return addrChan
 }
 
 func (w *Watcher) createPath(path string) error {

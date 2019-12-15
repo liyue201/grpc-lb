@@ -46,16 +46,24 @@ func newConsulWatcher(serviceName string, conf *api.Config) *ConsulWatcher {
 func (w *ConsulWatcher) Close() {
 	w.wp.Stop()
 	w.wg.Wait()
+	close(w.addrsChan)
 }
 
 func (w *ConsulWatcher) Watch() chan []resolver.Address {
-	go w.wp.RunWithConfig(w.consulConf.Address, w.consulConf)
+	w.wg.Add(1)
+	go func() {
+		defer w.wg.Done()
+		w.wp.RunWithConfig(w.consulConf.Address, w.consulConf)
+	}()
 	return w.addrsChan
 }
 
 func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 	entries, ok := data.([]*api.ServiceEntry)
 	if !ok {
+		return
+	}
+	if w.wp.IsStopped() {
 		return
 	}
 	addrs := []resolver.Address{}
@@ -92,7 +100,7 @@ func (w *ConsulWatcher) cloneAddresses(in []resolver.Address) []resolver.Address
 	return out
 }
 
-func isSameAddrs(addrs1, addrs2 []resolver.Address) bool  {
+func isSameAddrs(addrs1, addrs2 []resolver.Address) bool {
 	if len(addrs1) != len(addrs2) {
 		return false
 	}

@@ -34,8 +34,10 @@ func (r *zkResolver) start() {
 	go func() {
 		defer r.wg.Done()
 		out := r.watcher.Watch()
-		for addr := range out {
-			r.cc.UpdateState(resolver.State{Addresses: addr})
+		if out != nil {
+			for addr := range out {
+				r.cc.UpdateState(resolver.State{Addresses: addr})
+			}
 		}
 	}()
 }
