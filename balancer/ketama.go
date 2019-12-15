@@ -1,7 +1,7 @@
 package balancer
 
 import (
-	"hash/crc32"
+	"hash/fnv"
 	"sort"
 	"strconv"
 	"sync"
@@ -11,7 +11,14 @@ type HashFunc func(data []byte) uint32
 
 const (
 	DefaultReplicas = 10
+	Salt            = "n*@if09g3n"
 )
+
+func DefaultHash(data []byte) uint32 {
+	f := fnv.New32()
+	f.Write(data)
+	return f.Sum32()
+}
 
 type Ketama struct {
 	sync.Mutex
@@ -31,7 +38,7 @@ func NewKetama(replicas int, fn HashFunc) *Ketama {
 		h.replicas = DefaultReplicas
 	}
 	if h.hash == nil {
-		h.hash = crc32.ChecksumIEEE
+		h.hash = DefaultHash
 	}
 	return h
 }
@@ -49,7 +56,7 @@ func (h *Ketama) Add(nodes ...string) {
 
 	for _, node := range nodes {
 		for i := 0; i < h.replicas; i++ {
-			key := int(h.hash([]byte(strconv.Itoa(i) + node)))
+			key := int(h.hash([]byte(Salt + strconv.Itoa(i) + node)))
 
 			if _, ok := h.hashMap[key]; !ok {
 				h.keys = append(h.keys, key)
@@ -67,7 +74,7 @@ func (h *Ketama) Remove(nodes ...string) {
 	deletedKey := make([]int, 0)
 	for _, node := range nodes {
 		for i := 0; i < h.replicas; i++ {
-			key := int(h.hash([]byte(strconv.Itoa(i) + node)))
+			key := int(h.hash([]byte(Salt + strconv.Itoa(i) + node)))
 
 			if _, ok := h.hashMap[key]; ok {
 				deletedKey = append(deletedKey, key)
