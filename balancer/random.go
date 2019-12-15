@@ -33,12 +33,15 @@ func (*randomPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn
 
 	for addr, sc := range readySCs {
 		weight := 1
-		m, ok := addr.Metadata.(*map[string]string)
-		w, ok := (*m)["weight"]
-		if ok {
-			n, err := strconv.Atoi(w)
-			if err == nil && n > 0 {
-				weight = n
+		if addr.Metadata != nil {
+			if m, ok := addr.Metadata.(*map[string]string); ok {
+				w, ok := (*m)["weight"]
+				if ok {
+					n, err := strconv.Atoi(w)
+					if err == nil && n > 0 {
+						weight = n
+					}
+				}
 			}
 		}
 		for i := 0; i < weight; i++ {
