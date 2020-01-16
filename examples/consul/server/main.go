@@ -66,9 +66,9 @@ func StartService() {
 			ConsulCfg:   config,
 			ServiceName: "test_v1.0",
 			NData: consul.NodeData{
-				ID:      *nodeID,
-				Address: "127.0.0.1",
-				Port:    *port,
+				ID:       *nodeID,
+				Address:  "127.0.0.1",
+				Port:     *port,
 				Metadata: map[string]string{"weight": "1"},
 			},
 			Ttl: 5,

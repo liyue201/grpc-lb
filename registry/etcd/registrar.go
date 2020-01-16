@@ -20,13 +20,13 @@ type Registrar struct {
 }
 
 type Option struct {
-	EtcdConfig  etcd_cli.Config
-	RegistryDir string
-	ServiceName string
+	EtcdConfig     etcd_cli.Config
+	RegistryDir    string
+	ServiceName    string
 	ServiceVersion string
-	NodeID      string
-	NData       NodeData
-	Ttl         time.Duration
+	NodeID         string
+	NData          NodeData
+	Ttl            time.Duration
 }
 
 type NodeData struct {

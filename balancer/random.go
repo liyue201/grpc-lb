@@ -56,7 +56,7 @@ func (*randomPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn
 
 type randomPicker struct {
 	subConns []balancer.SubConn
-	mu   sync.Mutex
+	mu       sync.Mutex
 }
 
 func (p *randomPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {

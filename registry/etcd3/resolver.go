@@ -7,7 +7,7 @@ import (
 )
 
 type etcdResolver struct {
-	scheme 		string
+	scheme        string
 	etcdConfig    etcd_cli.Config
 	etcdWatchPath string
 	watcher       *Watcher

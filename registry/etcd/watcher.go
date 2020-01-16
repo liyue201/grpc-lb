@@ -2,9 +2,9 @@ package etcd
 
 import (
 	"encoding/json"
+	"fmt"
 	etcd_cli "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
-	"fmt"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
 	"sync"
@@ -16,8 +16,8 @@ type Watcher struct {
 	watcher etcd_cli.Watcher
 	ctx     context.Context
 	cancel  context.CancelFunc
-	wg sync.WaitGroup
-	addrs[] resolver.Address
+	wg      sync.WaitGroup
+	addrs   []resolver.Address
 }
 
 func (w *Watcher) Close() {
@@ -41,7 +41,7 @@ func newWatcher(key string, cli etcd_cli.Client) *Watcher {
 	return w
 }
 
-func (w * Watcher) GetAllAddresses() []resolver.Address {
+func (w *Watcher) GetAllAddresses() []resolver.Address {
 	resp, _ := w.keyapi.Get(w.ctx, w.key, &etcd_cli.GetOptions{Recursive: true})
 	addrs := []resolver.Address{}
 	for _, n := range resp.Node.Nodes {
@@ -87,14 +87,14 @@ func (w *Watcher) Watch() chan []resolver.Address {
 			}
 			nodeData := NodeData{}
 
-			if resp.Action == "set" || resp.Action  == "create" ||  resp.Action == "update" ||
+			if resp.Action == "set" || resp.Action == "create" || resp.Action == "update" ||
 				resp.Action == "delete" || resp.Action == "expire" {
 				err := json.Unmarshal([]byte(resp.Node.Value), &nodeData)
 				if err != nil {
 					grpclog.Infof("Parse node data error:", err)
 					continue
 				}
-				addr :=	resolver.Address{Addr: nodeData.Addr, Metadata: &nodeData.Metadata}
+				addr := resolver.Address{Addr: nodeData.Addr, Metadata: &nodeData.Metadata}
 				changed := false
 				switch resp.Action {
 				case "set", "create":
@@ -110,10 +110,10 @@ func (w *Watcher) Watch() chan []resolver.Address {
 			}
 		}
 	}()
-	return  out
+	return out
 }
 
-func (w *Watcher) cloneAddresses(in []resolver.Address) []resolver.Address  {
+func (w *Watcher) cloneAddresses(in []resolver.Address) []resolver.Address {
 	out := make([]resolver.Address, len(in))
 	for i := 0; i < len(in); i++ {
 		out[i] = in[i]

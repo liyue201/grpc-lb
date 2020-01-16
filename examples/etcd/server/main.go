@@ -64,13 +64,13 @@ func StartService() {
 
 	registry, err := registry.NewRegistrar(
 		registry.Option{
-			EtcdConfig:  etcdConfg,
-			RegistryDir: registry.RegistryDir,
-			ServiceName:  "test",
-			ServiceVersion:"v1.0",
-			NodeID:      *nodeID,
+			EtcdConfig:     etcdConfg,
+			RegistryDir:    registry.RegistryDir,
+			ServiceName:    "test",
+			ServiceVersion: "v1.0",
+			NodeID:         *nodeID,
 			NData: registry.NodeData{
-				Addr: fmt.Sprintf("127.0.0.1:%d", *port),
+				Addr:     fmt.Sprintf("127.0.0.1:%d", *port),
 				Metadata: map[string]string{"weight": "1"},
 			},
 			Ttl: 10 * time.Second,

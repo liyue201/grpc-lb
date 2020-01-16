@@ -2,13 +2,13 @@ package main
 
 import (
 	etcd "github.com/coreos/etcd/client"
+	"github.com/liyue201/grpc-lb/balancer"
 	"github.com/liyue201/grpc-lb/examples/proto"
 	registry "github.com/liyue201/grpc-lb/registry/etcd"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
 	"time"
-	"github.com/liyue201/grpc-lb/balancer"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 	}
 	registry.RegisterResolver("etcd", etcdConfg, "test", "v1.0")
 
-	c, err := grpc.Dial("etcd:///",  grpc.WithInsecure(), grpc.WithBalancerName(balancer.Random))
+	c, err := grpc.Dial("etcd:///", grpc.WithInsecure(), grpc.WithBalancerName(balancer.Random))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return

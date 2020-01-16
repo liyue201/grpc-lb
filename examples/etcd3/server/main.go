@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	etcd "go.etcd.io/etcd/clientv3"
 	"github.com/liyue201/grpc-lb/examples/proto"
 	registry "github.com/liyue201/grpc-lb/registry/etcd3"
+	etcd "go.etcd.io/etcd/clientv3"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
@@ -64,11 +64,11 @@ func StartService() {
 
 	registrar, err := registry.NewRegistrar(
 		registry.Option{
-			EtcdConfig:  etcdConfg,
-			RegistryDir: registry.RegistryDir,
-			ServiceName: "test",
+			EtcdConfig:     etcdConfg,
+			RegistryDir:    registry.RegistryDir,
+			ServiceName:    "test",
 			ServiceVersion: "v1.0",
-			NodeID:      *nodeID,
+			NodeID:         *nodeID,
 			NData: registry.NodeData{
 				Addr: fmt.Sprintf("127.0.0.1:%d", *port),
 				//Metadata: map[string]string{"weight": "1"},

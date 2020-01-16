@@ -1,4 +1,3 @@
-
 package etcd
 
 import (
@@ -7,20 +6,20 @@ import (
 	"sync"
 )
 
-type etcdResolver struct{
-	scheme string
-	etcdConfig etcd_cli.Config
-	etcdWatchPath 	string
-	watcher *Watcher
-	target resolver.Target
-	cc     resolver.ClientConn
-	wg sync.WaitGroup
+type etcdResolver struct {
+	scheme        string
+	etcdConfig    etcd_cli.Config
+	etcdWatchPath string
+	watcher       *Watcher
+	target        resolver.Target
+	cc            resolver.ClientConn
+	wg            sync.WaitGroup
 }
 
 func (r *etcdResolver) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOption) (resolver.Resolver, error) {
 	etcdCli, err := etcd_cli.New(r.etcdConfig)
-	if err != nil{
-		return  nil, err
+	if err != nil {
+		return nil, err
 	}
 	r.target = target
 	r.cc = cc
@@ -52,10 +51,10 @@ func (r *etcdResolver) Close() {
 	r.wg.Wait()
 }
 
-func RegisterResolver(scheme string, etcdConfig etcd_cli.Config, srvName, srvVersion string)  {
+func RegisterResolver(scheme string, etcdConfig etcd_cli.Config, srvName, srvVersion string) {
 	resolver.Register(&etcdResolver{
-		scheme: scheme,
-		etcdConfig: etcdConfig,
+		scheme:        scheme,
+		etcdConfig:    etcdConfig,
 		etcdWatchPath: RegistryDir + "/" + srvName + "/" + srvVersion,
 	})
 }

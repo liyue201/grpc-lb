@@ -19,7 +19,7 @@ func main() {
 	balancer.InitConsistentHashBuilder(balancer.DefaultConsistentHashKey)
 	registry.RegisterResolver("etcd", etcdConfg, "test", "v1.0")
 
-	c, err := grpc.Dial("etcd:///",  grpc.WithInsecure(), grpc.WithBalancerName(balancer.ConsistentHash))
+	c, err := grpc.Dial("etcd:///", grpc.WithInsecure(), grpc.WithBalancerName(balancer.ConsistentHash))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return

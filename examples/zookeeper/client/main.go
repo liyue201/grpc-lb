@@ -2,17 +2,17 @@ package main
 
 import (
 	"github.com/liyue201/grpc-lb/balancer"
-	registry "github.com/liyue201/grpc-lb/registry/zookeeper"
 	"github.com/liyue201/grpc-lb/examples/proto"
+	registry "github.com/liyue201/grpc-lb/registry/zookeeper"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"log"
 	"time"
-	"google.golang.org/grpc"
 )
 
 func main() {
 	registry.RegisterResolver("zk", []string{"144.202.111.210:2189"}, "test", "v1.0")
-	c, err := grpc.Dial("zk:///",  grpc.WithInsecure(), grpc.WithBalancerName(balancer.RoundRobin))
+	c, err := grpc.Dial("zk:///", grpc.WithInsecure(), grpc.WithBalancerName(balancer.RoundRobin))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return

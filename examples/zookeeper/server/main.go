@@ -59,13 +59,13 @@ func (s *RpcServer) Say(ctx context.Context, req *proto.SayReq) (*proto.SayResp,
 func StartService() {
 	registrar, err := registry.NewRegistrar(
 		registry.Option{
-			ZkServers: []string{"144.202.111.210:2189"},
-			RegistryDir: registry.RegistryDir,
-			ServiceName: "test",
+			ZkServers:      []string{"144.202.111.210:2189"},
+			RegistryDir:    registry.RegistryDir,
+			ServiceName:    "test",
 			ServiceVersion: "v1.0",
-			NodeID:      *nodeID,
+			NodeID:         *nodeID,
 			NData: registry.NodeData{
-				Addr: fmt.Sprintf("127.0.0.1:%d", *port),
+				Addr:     fmt.Sprintf("127.0.0.1:%d", *port),
 				Metadata: map[string]string{"weight": "1"},
 			},
 			SessionTimeout: time.Second,
