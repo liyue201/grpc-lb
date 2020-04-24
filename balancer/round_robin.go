@@ -2,12 +2,12 @@ package balancer
 
 import (
 	"context"
+	"github.com/liyue201/grpc-lb/common"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
 	"math/rand"
-	"strconv"
 	"sync"
 )
 
@@ -32,18 +32,7 @@ func (*roundRobinPickerBuilder) Build(readySCs map[resolver.Address]balancer.Sub
 	}
 	var scs []balancer.SubConn
 	for addr, sc := range readySCs {
-		weight := 1
-		if addr.Metadata != nil {
-			if m, ok := addr.Metadata.(*map[string]string); ok {
-				w, ok := (*m)["weight"]
-				if ok {
-					n, err := strconv.Atoi(w)
-					if err == nil && n > 0 {
-						weight = n
-					}
-				}
-			}
-		}
+		weight := common.GetWeight(addr)
 		for i := 0; i < weight; i++ {
 			scs = append(scs, sc)
 		}

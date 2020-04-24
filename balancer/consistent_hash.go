@@ -3,11 +3,11 @@ package balancer
 import (
 	"context"
 	"fmt"
+	"github.com/liyue201/grpc-lb/common"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
-	"strconv"
 	"sync"
 )
 
@@ -41,17 +41,7 @@ func (b *consistentHashPickerBuilder) Build(readySCs map[resolver.Address]balanc
 	}
 
 	for addr, sc := range readySCs {
-		weight := 1
-		if addr.Metadata != nil {
-			if m, ok := addr.Metadata.(*map[string]string); ok {
-				if w, ok := (*m)["weight"]; ok {
-					n, err := strconv.Atoi(w)
-					if err == nil && n > 0 {
-						weight = n
-					}
-				}
-			}
-		}
+		weight := common.GetWeight(addr)
 		for i := 0; i < weight; i++ {
 			node := wrapAddr(addr.Addr, i)
 			picker.hash.Add(node)

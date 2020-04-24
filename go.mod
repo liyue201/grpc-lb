@@ -18,8 +18,8 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.12.1 // indirect
 	github.com/hashicorp/consul/api v1.3.0
-	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
+	github.com/nacos-group/nacos-sdk-go v0.3.1
 	github.com/prometheus/client_golang v1.3.0 // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
 	github.com/soheilhy/cmux v0.1.4 // indirect
