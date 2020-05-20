@@ -92,7 +92,7 @@ func (e *Registrar) Register() error {
 		return err
 	}
 
-	ticker := time.NewTicker(e.ttl / 5)
+	ticker := time.NewTicker(e.ttl * time.Second / 5)
 	for {
 		select {
 		case <-ticker.C:
