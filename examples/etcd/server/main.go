@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	etcd "github.com/coreos/etcd/client"
+	etcd_cli "github.com/coreos/etcd/client"
 	"github.com/liyue201/grpc-lb/examples/proto"
-	registry "github.com/liyue201/grpc-lb/registry/etcd"
+	"github.com/liyue201/grpc-lb/registry"
+	"github.com/liyue201/grpc-lb/registry/etcd"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
@@ -58,22 +59,23 @@ func (s *RpcServer) Say(ctx context.Context, req *proto.SayReq) (*proto.SayResp,
 }
 
 func StartService() {
-	etcdConfg := etcd.Config{
-		Endpoints: []string{"http://144.202.111.210:2379"},
+	etcdConfg := etcd_cli.Config{
+		Endpoints: []string{"http://10.0.101.68:2379"},
 	}
 
-	registry, err := registry.NewRegistrar(
-		registry.Option{
-			EtcdConfig:     etcdConfg,
-			RegistryDir:    registry.RegistryDir,
-			ServiceName:    "test",
-			ServiceVersion: "v1.0",
-			NodeID:         *nodeID,
-			NData: registry.NodeData{
-				Addr:     fmt.Sprintf("127.0.0.1:%d", *port),
-				Metadata: map[string]string{"weight": "1"},
-			},
-			Ttl: 10 * time.Second,
+	service := &registry.ServiceInfo{
+		InstanceId: *nodeID,
+		Name:       "test",
+		Version:    "1.0",
+		Address:    fmt.Sprintf("127.0.0.1:%d", *port),
+		Metadata:   map[string]string{"weight": "1"},
+	}
+
+	registry, err := etcd.NewRegistrar(
+		&etcd.Config{
+			EtcdConfig:  etcdConfg,
+			RegistryDir: "/backend/services",
+			Ttl:         10 * time.Second,
 		})
 	if err != nil {
 		log.Panic(err)
@@ -90,14 +92,14 @@ func StartService() {
 
 	wg.Add(1)
 	go func() {
-		registry.Register()
+		registry.Register(service)
 		wg.Done()
 	}()
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
-	registry.Unregister()
+	registry.Unregister(service)
 	server.Stop()
 
 	wg.Wait()

@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	registry.RegisterResolver("zk", []string{"144.202.111.210:2189"}, "test", "v1.0")
+	registry.RegisterResolver("zk", []string{"10.0.101.68:2189"}, "/backend/services", "test", "1.0")
 	c, err := grpc.Dial("zk:///", grpc.WithInsecure(), grpc.WithBalancerName(balancer.RoundRobin))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)

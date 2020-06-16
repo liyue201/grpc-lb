@@ -5,6 +5,7 @@ import (
 	"fmt"
 	capi "github.com/hashicorp/consul/api"
 	"github.com/liyue201/grpc-lb/examples/proto"
+	"github.com/liyue201/grpc-lb/registry"
 	"github.com/liyue201/grpc-lb/registry/consul"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -58,19 +59,20 @@ func (s *RpcServer) Say(ctx context.Context, req *proto.SayReq) (*proto.SayResp,
 
 func StartService() {
 	config := &capi.Config{
-		Address: "http://144.202.111.210:8500",
+		Address: "http://10.0.101.68:8500",
+	}
+
+	service := &registry.ServiceInfo{
+		InstanceId: *nodeID,
+		Name:       "test",
+		Version:    "1.0",
+		Address:    fmt.Sprintf("127.0.0.1:%d", *port),
+		Metadata: map[string]string{"weight": "1"},
 	}
 
 	registry, err := consul.NewRegistrar(
-		&consul.Congfig{
+		&consul.Config{
 			ConsulCfg:   config,
-			ServiceName: "test_v1.0",
-			NData: consul.NodeData{
-				ID:       *nodeID,
-				Address:  "127.0.0.1",
-				Port:     *port,
-				Metadata: map[string]string{"weight": "1"},
-			},
 			Ttl: 5,
 		})
 	if err != nil {
@@ -87,14 +89,14 @@ func StartService() {
 	}()
 	wg.Add(1)
 	go func() {
-		registry.Register()
+		registry.Register(service)
 		wg.Done()
 	}()
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
-	registry.Unregister()
+	registry.Unregister(service)
 	server.Stop()
 	wg.Wait()
 }

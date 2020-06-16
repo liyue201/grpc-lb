@@ -50,10 +50,10 @@ func (r *zkResolver) Close() {
 	r.wg.Wait()
 }
 
-func RegisterResolver(scheme string, zkServers []string, srvName, srvVersion string) {
+func RegisterResolver(scheme string, zkServers []string, registryDir, srvName, srvVersion string) {
 	resolver.Register(&zkResolver{
 		scheme:      scheme,
 		zkServers:   zkServers,
-		zkWatchPath: RegistryDir + "/" + srvName + "/" + srvVersion,
+		zkWatchPath: registryDir + "/" + srvName + "/" + srvVersion,
 	})
 }

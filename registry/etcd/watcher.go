@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	etcd_cli "github.com/coreos/etcd/client"
+	"github.com/liyue201/grpc-lb/registry"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
@@ -45,16 +46,16 @@ func (w *Watcher) GetAllAddresses() []resolver.Address {
 	resp, _ := w.keyapi.Get(w.ctx, w.key, &etcd_cli.GetOptions{Recursive: true})
 	addrs := []resolver.Address{}
 	for _, n := range resp.Node.Nodes {
-		nodeData := NodeData{}
+		serviceInfo := registry.ServiceInfo{}
 
-		err := json.Unmarshal([]byte(n.Value), &nodeData)
+		err := json.Unmarshal([]byte(n.Value), &serviceInfo)
 		if err != nil {
 			grpclog.Infof("Parse node data error:", err)
 			continue
 		}
 		addrs = append(addrs, resolver.Address{
-			Addr:     nodeData.Addr,
-			Metadata: &nodeData.Metadata,
+			Addr:     serviceInfo.Address,
+			Metadata: &serviceInfo.Metadata,
 		})
 	}
 	fmt.Printf("[GetAllAddresses] %v\n", addrs)
@@ -85,7 +86,7 @@ func (w *Watcher) Watch() chan []resolver.Address {
 			if resp.Node.Dir {
 				continue
 			}
-			nodeData := NodeData{}
+			nodeData := registry.ServiceInfo{}
 
 			if resp.Action == "set" || resp.Action == "create" || resp.Action == "update" ||
 				resp.Action == "delete" || resp.Action == "expire" {
@@ -94,7 +95,7 @@ func (w *Watcher) Watch() chan []resolver.Address {
 					grpclog.Infof("Parse node data error:", err)
 					continue
 				}
-				addr := resolver.Address{Addr: nodeData.Addr, Metadata: &nodeData.Metadata}
+				addr := resolver.Address{Addr: nodeData.Address, Metadata: &nodeData.Metadata}
 				changed := false
 				switch resp.Action {
 				case "set", "create":

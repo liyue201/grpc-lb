@@ -5,7 +5,7 @@ This is a gRPC load balancing library for go.
  
 ## Feature
 - supports Random,RoundRobin and consistent-hash strategies.
-- supports [etcd](https://github.com/etcd-io/etcd),[consul](https://github.com/consul/consul) and [zookeeper](https://github.com/apache/zookeeper) as registry.
+- supports [etcd](https://github.com/etcd-io/etcd),[consul](https://github.com/consul/consul) and [zookeeper](https://github.com/apache/zookeeper) as a registry.
 
 ## Example
 
@@ -14,22 +14,22 @@ package main
 
 import (
 	etcd "github.com/coreos/etcd/client"
+	"github.com/liyue201/grpc-lb/balancer"
 	"github.com/liyue201/grpc-lb/examples/proto"
 	registry "github.com/liyue201/grpc-lb/registry/etcd"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
 	"time"
-	"github.com/liyue201/grpc-lb/balancer"
 )
 
 func main() {
 	etcdConfg := etcd.Config{
-		Endpoints: []string{"http://144.202.111.210:2379"},
+		Endpoints: []string{"http://10.0.101.68:2379"},
 	}
-	registry.RegisterResolver( "etcd", etcdConfg, "test", "v1.0")
+	registry.RegisterResolver("etcd", etcdConfg, "/backend/services", "test", "1.0")
 
-	c, err := grpc.Dial("etcd:///",  grpc.WithInsecure(), grpc.WithBalancerName(balancer.RoundRobin))
+	c, err := grpc.Dial("etcd:///", grpc.WithInsecure(), grpc.WithBalancerName(balancer.RoundRobin))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)
 		return
@@ -49,7 +49,6 @@ func main() {
 		log.Printf(resp.Content)
 	}
 }
-
 ```
 see more [examples](/examples)
 

@@ -49,10 +49,10 @@ func (r *etcdResolver) Close() {
 	r.wg.Wait()
 }
 
-func RegisterResolver(scheme string, etcdConfig etcd_cli.Config, srvName, srvVersion string) {
+func RegisterResolver(scheme string, etcdConfig etcd_cli.Config, registryDir, srvName, srvVersion string) {
 	resolver.Register(&etcdResolver{
 		scheme:        scheme,
 		etcdConfig:    etcdConfig,
-		etcdWatchPath: RegistryDir + "/" + srvName + "/" + srvVersion,
+		etcdWatchPath: registryDir + "/" + srvName + "/" + srvVersion,
 	})
 }

@@ -3,7 +3,6 @@ package consul
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
 	"google.golang.org/grpc/grpclog"
@@ -72,7 +71,6 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 		for _, check := range e.Checks {
 			if check.ServiceID == e.Service.ID {
 				if check.Status == api.HealthPassing {
-					addr := fmt.Sprintf("%s:%d", e.Service.Address, e.Service.Port)
 					metadata := map[string]string{}
 					if len(e.Service.Tags) > 0 {
 						err := json.Unmarshal([]byte(e.Service.Tags[0]), &metadata)
@@ -80,7 +78,7 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 							grpclog.Infof("Parse node data error:", err)
 						}
 					}
-					addrs = append(addrs, resolver.Address{Addr: addr, Metadata: &metadata})
+					addrs = append(addrs, resolver.Address{Addr: e.Service.Address, Metadata: &metadata})
 				}
 				break
 			}

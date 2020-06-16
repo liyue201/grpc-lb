@@ -4,46 +4,33 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/liyue201/grpc-lb/registry"
 	"github.com/samuel/go-zookeeper/zk"
 	"google.golang.org/grpc/grpclog"
 	"strings"
+	"sync"
 	"time"
 )
 
-var RegistryDir = "/grpclb"
-
-type Option struct {
+type Config struct {
 	ZkServers      []string
 	RegistryDir    string
-	ServiceName    string
-	ServiceVersion string
-	NodeID         string
-	NData          NodeData
 	SessionTimeout time.Duration
 }
 
-type NodeData struct {
-	Addr     string
-	Metadata map[string]string
-}
-
 type Registrar struct {
-	opt      Option
-	path     string
-	nodeInfo string
+	sync.RWMutex
+	conf     *Config
 	conn     *zk.Conn
-	cancel   context.CancelFunc
+	canceler map[string]context.CancelFunc
 }
 
-func NewRegistrar(opt Option) (*Registrar, error) {
+func NewRegistrar(conf *Config) (*Registrar, error) {
 	reg := &Registrar{
-		opt:  opt,
-		path: opt.RegistryDir + "/" + opt.ServiceName + "/" + opt.ServiceVersion + "/" + opt.NodeID,
+		conf:     conf,
+		canceler: make(map[string]context.CancelFunc),
 	}
-	data, _ := json.Marshal(opt.NData)
-	reg.nodeInfo = string(data)
-
-	c, err := connect(opt.ZkServers, opt.SessionTimeout)
+	c, err := connect(conf.ZkServers, conf.SessionTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -97,17 +84,25 @@ func (r *Registrar) register(path string, nodeInfo string) error {
 	return nil
 }
 
-func (r *Registrar) Register() error {
-	err := r.register(r.path, r.nodeInfo)
-	if err == nil {
-		ctx, cancel := context.WithCancel(context.Background())
-		r.cancel = cancel
-		r.keepalive(ctx)
+func (r *Registrar) Register(service *registry.ServiceInfo) error {
+	path := r.conf.RegistryDir + "/" + service.Name + "/" + service.Version + "/" + service.InstanceId
+	data, _ := json.Marshal(service)
+	err := r.register(path, string(data))
+	if err != nil {
+		return err
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	r.Lock()
+	r.canceler[service.InstanceId] = cancel
+	r.Unlock()
+
+	r.keepalive(ctx, path, string(data))
+
 	return err
 }
 
-func (r *Registrar) keepalive(ctx context.Context) {
+func (r *Registrar) keepalive(ctx context.Context, path, value string) {
 	ticker := time.NewTicker(time.Second)
 	for {
 		select {
@@ -115,7 +110,7 @@ func (r *Registrar) keepalive(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if r.conn.State() != zk.StateHasSession {
-				err := r.register(r.path, r.nodeInfo)
+				err := r.register(path, value)
 				if err != nil {
 					grpclog.Errorf("Registrar register error, %v\n", err.Error())
 				}
@@ -124,10 +119,16 @@ func (r *Registrar) keepalive(ctx context.Context) {
 	}
 }
 
-func (r *Registrar) Unregister() {
-	if r.cancel != nil {
-		r.cancel()
+func (r *Registrar) Unregister(service *registry.ServiceInfo) {
+	r.RLock()
+	cancel, ok := r.canceler[service.InstanceId]
+	r.RUnlock()
+	if ok {
+		cancel()
 	}
+}
+
+func (r *Registrar) Close() {
 	r.conn.Close()
 	r.conn = nil
 }

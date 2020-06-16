@@ -10,7 +10,7 @@ docker run --name zookeeper -p 2189:2181 -d zookeeper:3.4
 
 install etcd
 ```
-NODE1=144.202.111.210
+NODE1=10.0.101.68
 docker run -d   -p 2379:2379  -p 2380:2380 \
 --name etcd  \
 quay.io/coreos/etcd:latest \

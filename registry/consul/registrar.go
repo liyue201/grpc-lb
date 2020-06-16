@@ -5,52 +5,39 @@ import (
 	"encoding/json"
 	"fmt"
 	consul "github.com/hashicorp/consul/api"
+	"github.com/liyue201/grpc-lb/registry"
 	"google.golang.org/grpc/grpclog"
+	"sync"
 	"time"
 )
 
 type Registrar struct {
-	ctx     context.Context
-	cancel  context.CancelFunc
-	client  *consul.Client
-	cfg     *Congfig
-	checkId string
+	sync.RWMutex
+	client   *consul.Client
+	cfg      *Config
+	canceler map[string]context.CancelFunc
 }
 
-type Congfig struct {
-	ConsulCfg   *consul.Config
-	ServiceName string
-	NData       NodeData
-	Ttl         int //ttl seconds
+type Config struct {
+	ConsulCfg *consul.Config
+	Ttl       int //ttl seconds
 }
 
-type NodeData struct {
-	ID       string
-	Address  string
-	Port     int
-	Metadata map[string]string
-}
-
-func NewRegistrar(cfg *Congfig) (*Registrar, error) {
+func NewRegistrar(cfg *Config) (*Registrar, error) {
 	c, err := consul.NewClient(cfg.ConsulCfg)
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-
 	return &Registrar{
-		ctx:     ctx,
-		cancel:  cancel,
-		client:  c,
-		cfg:     cfg,
-		checkId: "service:" + cfg.NData.ID,
+		canceler: make(map[string]context.CancelFunc),
+		client:   c,
+		cfg:      cfg,
 	}, nil
 }
 
-func (c *Registrar) Register() error {
-
+func (c *Registrar) Register(service *registry.ServiceInfo) error {
 	// register service
-	metadata, err := json.Marshal(c.cfg.NData.Metadata)
+	metadata, err := json.Marshal(service.Metadata)
 	if err != nil {
 		return err
 	}
@@ -59,10 +46,9 @@ func (c *Registrar) Register() error {
 
 	register := func() error {
 		regis := &consul.AgentServiceRegistration{
-			ID:      c.cfg.NData.ID,
-			Name:    c.cfg.ServiceName,
-			Address: c.cfg.NData.Address,
-			Port:    c.cfg.NData.Port,
+			ID:      service.InstanceId,
+			Name:    service.Name + ":" + service.Version,
+			Address: service.Address,
 			Tags:    tags,
 			Check: &consul.AgentServiceCheck{
 				TTL:                            fmt.Sprintf("%ds", c.cfg.Ttl),
@@ -80,19 +66,24 @@ func (c *Registrar) Register() error {
 	if err != nil {
 		return err
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c.Lock()
+	c.canceler[service.InstanceId] = cancel
+	c.Unlock()
 
 	keepAliveTicker := time.NewTicker(time.Duration(c.cfg.Ttl) * time.Second / 5)
 	registerTicker := time.NewTicker(time.Minute)
 
 	for {
 		select {
-		case <-c.ctx.Done():
+		case <-ctx.Done():
 			keepAliveTicker.Stop()
 			registerTicker.Stop()
-			c.client.Agent().ServiceDeregister(c.cfg.NData.ID)
+			c.client.Agent().ServiceDeregister(service.InstanceId)
 			return nil
 		case <-keepAliveTicker.C:
-			err := c.client.Agent().PassTTL(c.checkId, "")
+			err := c.client.Agent().PassTTL("service:"+service.InstanceId, "")
 			if err != nil {
 				grpclog.Infof("consul registry check %v.\n", err)
 			}
@@ -107,7 +98,18 @@ func (c *Registrar) Register() error {
 	return nil
 }
 
-func (c *Registrar) Unregister() error {
-	c.cancel()
+func (c *Registrar) Unregister(service *registry.ServiceInfo) error {
+	c.RLock()
+	cancel, ok := c.canceler[service.InstanceId]
+	c.RUnlock()
+
+	if ok {
+		cancel()
+	}
 	return nil
+}
+
+
+func (r *Registrar) Close() {
+
 }

@@ -5,102 +5,93 @@ import (
 	"fmt"
 	etcd3 "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
+	"github.com/liyue201/grpc-lb/registry"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
+	"sync"
 	"time"
 )
 
-var RegistryDir = "/grpclb"
-
 type Registrar struct {
+	sync.RWMutex
+	conf        *Config
 	etcd3Client *etcd3.Client
-	key         string
-	value       string
-	ttl         time.Duration
-	ctx         context.Context
-	cancel      context.CancelFunc
+	canceler    map[string]context.CancelFunc
 }
 
-type Option struct {
-	EtcdConfig     etcd3.Config
-	RegistryDir    string
-	ServiceName    string
-	ServiceVersion string
-	NodeID         string
-	NData          NodeData
-	Ttl            time.Duration
+type Config struct {
+	EtcdConfig  etcd3.Config
+	RegistryDir string
+	Ttl         time.Duration
 }
 
-type NodeData struct {
-	Addr     string
-	Metadata map[string]string
-}
-
-func NewRegistrar(option Option) (*Registrar, error) {
-	client, err := etcd3.New(option.EtcdConfig)
+func NewRegistrar(conf *Config) (*Registrar, error) {
+	client, err := etcd3.New(conf.EtcdConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	val, err := json.Marshal(option.NData)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
 	registry := &Registrar{
 		etcd3Client: client,
-		key:         option.RegistryDir + "/" + option.ServiceName + "/" + option.ServiceVersion + "/" + option.NodeID,
-		value:       string(val),
-		ttl:         option.Ttl / time.Second,
-		ctx:         ctx,
-		cancel:      cancel,
+		conf:        conf,
+		canceler:    make(map[string]context.CancelFunc),
 	}
 	return registry, nil
 }
 
-func (e *Registrar) Register() error {
+func (r *Registrar) Register(service *registry.ServiceInfo) error {
+	val, err := json.Marshal(service)
+	if err != nil {
+		return err
+	}
+
+	key := r.conf.RegistryDir + "/" + service.Name + "/" + service.Version + "/" + service.InstanceId
+	value := string(val)
+	ctx, cancel := context.WithCancel(context.Background())
+	r.Lock()
+	r.canceler[service.InstanceId] = cancel
+	r.Unlock()
 
 	insertFunc := func() error {
-		resp, err := e.etcd3Client.Grant(e.ctx, int64(e.ttl))
+		resp, err := r.etcd3Client.Grant(ctx, int64(r.conf.Ttl/time.Second))
 		if err != nil {
 			fmt.Printf("[Register] %v\n", err.Error())
 			return err
 		}
-		_, err = e.etcd3Client.Get(e.ctx, e.key)
+		_, err = r.etcd3Client.Get(ctx, key)
 		if err != nil {
 			if err == rpctypes.ErrKeyNotFound {
-				if _, err := e.etcd3Client.Put(e.ctx, e.key, e.value, etcd3.WithLease(resp.ID)); err != nil {
-					grpclog.Infof("grpclb: set key '%s' with ttl to etcd3 failed: %s", e.key, err.Error())
+				if _, err := r.etcd3Client.Put(ctx, key, value, etcd3.WithLease(resp.ID)); err != nil {
+					grpclog.Infof("grpclb: set key '%s' with ttl to etcd3 failed: %s", key, err.Error())
 				}
 			} else {
-				grpclog.Infof("grpclb: key '%s' connect to etcd3 failed: %s", e.key, err.Error())
+				grpclog.Infof("grpclb: key '%s' connect to etcd3 failed: %s", key, err.Error())
 			}
 			return err
 		} else {
 			// refresh set to true for not notifying the watcher
-			if _, err := e.etcd3Client.Put(e.ctx, e.key, e.value, etcd3.WithLease(resp.ID)); err != nil {
-				grpclog.Infof("grpclb: refresh key '%s' with ttl to etcd3 failed: %s", e.key, err.Error())
+			if _, err := r.etcd3Client.Put(ctx, key, value, etcd3.WithLease(resp.ID)); err != nil {
+				grpclog.Infof("grpclb: refresh key '%s' with ttl to etcd3 failed: %s", key, err.Error())
 				return err
 			}
 		}
 		return nil
 	}
 
-	err := insertFunc()
+	err = insertFunc()
 	if err != nil {
 		return err
 	}
 
-	ticker := time.NewTicker(e.ttl * time.Second / 5)
+	ticker := time.NewTicker(r.conf.Ttl / 5)
 	for {
 		select {
 		case <-ticker.C:
 			insertFunc()
-		case <-e.ctx.Done():
+		case <-ctx.Done():
 			ticker.Stop()
-			if _, err := e.etcd3Client.Delete(context.Background(), e.key); err != nil {
-				grpclog.Infof("grpclb: deregister '%s' failed: %s", e.key, err.Error())
+			if _, err := r.etcd3Client.Delete(context.Background(), key); err != nil {
+				grpclog.Infof("grpclb: deregister '%s' failed: %s", key, err.Error())
 			}
 			return nil
 		}
@@ -109,7 +100,17 @@ func (e *Registrar) Register() error {
 	return nil
 }
 
-func (e *Registrar) Unregister() error {
-	e.cancel()
+func (r *Registrar) Unregister(service *registry.ServiceInfo) error {
+	r.RLock()
+	cancel, ok := r.canceler[service.InstanceId]
+	r.RUnlock()
+
+	if ok {
+		cancel()
+	}
 	return nil
+}
+
+func (r *Registrar) Close() {
+	r.etcd3Client.Close()
 }

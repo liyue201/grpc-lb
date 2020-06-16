@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-//http://144.202.111.210:8500/v1/agent/services
+//http://10.0.101.68:8500/v1/agent/services
 func main() {
-	consul.RegisterResolver("consul", &con_api.Config{Address: "http://144.202.111.210:8500"}, "test_v1.0")
+	consul.RegisterResolver("consul", &con_api.Config{Address: "http://10.0.101.68:8500"}, "test:1.0")
 	c, err := grpc.Dial("consul:///", grpc.WithInsecure(), grpc.WithBalancerName(balancer.RoundRobin))
 	if err != nil {
 		log.Printf("grpc dial: %s", err)

@@ -13,9 +13,9 @@ import (
 
 func main() {
 	etcdConfg := etcd3.Config{
-		Endpoints: []string{"http://144.202.111.210:2379"},
+		Endpoints: []string{"http://10.0.101.68:2379"},
 	}
-	registry.RegisterResolver("etcd3", etcdConfg, "test", "v1.0")
+	registry.RegisterResolver("etcd3", etcdConfg, "/backend/services", "test", "1.0")
 
 	c, err := grpc.Dial("etcd3:///", grpc.WithInsecure(), grpc.WithBalancerName(balancer.RoundRobin))
 	if err != nil {

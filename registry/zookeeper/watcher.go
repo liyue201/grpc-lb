@@ -2,6 +2,7 @@ package zk
 
 import (
 	"encoding/json"
+	"github.com/liyue201/grpc-lb/registry"
 	"github.com/samuel/go-zookeeper/zk"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
@@ -59,12 +60,12 @@ func (w *Watcher) Watch() chan []resolver.Address {
 				if err != nil {
 					continue
 				}
-				nodeData := NodeData{}
+				nodeData := registry.ServiceInfo{}
 				err = json.Unmarshal(data, &nodeData)
 				if err != nil {
 					continue
 				}
-				addrs = append(addrs, resolver.Address{Addr: nodeData.Addr, Metadata: &nodeData.Metadata})
+				addrs = append(addrs, resolver.Address{Addr: nodeData.Address, Metadata: &nodeData.Metadata})
 			}
 
 			if !isSameAddrs(w.addrs, addrs) {

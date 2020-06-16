@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	etcd3 "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
+	"github.com/liyue201/grpc-lb/registry"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
@@ -44,7 +45,7 @@ func (w *Watcher) GetAllAddresses() []resolver.Address {
 			for _, addr := range addrs {
 				v := addr
 				ret = append(ret, resolver.Address{
-					Addr:     v.Addr,
+					Addr:     v.Address,
 					Metadata: &v.Metadata,
 				})
 			}
@@ -69,24 +70,24 @@ func (w *Watcher) Watch() chan []resolver.Address {
 			for _, ev := range wresp.Events {
 				switch ev.Type {
 				case mvccpb.PUT:
-					nodeData := NodeData{}
+					nodeData := registry.ServiceInfo{}
 					err := json.Unmarshal([]byte(ev.Kv.Value), &nodeData)
 					if err != nil {
 						grpclog.Error("Parse node data error:", err)
 						continue
 					}
-					addr := resolver.Address{Addr: nodeData.Addr, Metadata: &nodeData.Metadata}
+					addr := resolver.Address{Addr: nodeData.Address, Metadata: &nodeData.Metadata}
 					if w.addAddr(addr) {
 						out <- w.cloneAddresses(w.addrs)
 					}
 				case mvccpb.DELETE:
-					nodeData := NodeData{}
+					nodeData := registry.ServiceInfo{}
 					err := json.Unmarshal([]byte(ev.Kv.Value), &nodeData)
 					if err != nil {
 						grpclog.Error("Parse node data error:", err)
 						continue
 					}
-					addr := resolver.Address{Addr: nodeData.Addr, Metadata: &nodeData.Metadata}
+					addr := resolver.Address{Addr: nodeData.Address, Metadata: &nodeData.Metadata}
 					if w.removeAddr(addr) {
 						out <- w.cloneAddresses(w.addrs)
 					}
@@ -97,8 +98,8 @@ func (w *Watcher) Watch() chan []resolver.Address {
 	return out
 }
 
-func extractAddrs(resp *etcd3.GetResponse) []NodeData {
-	addrs := []NodeData{}
+func extractAddrs(resp *etcd3.GetResponse) [] registry.ServiceInfo {
+	addrs := []registry.ServiceInfo{}
 
 	if resp == nil || resp.Kvs == nil {
 		return addrs
@@ -106,7 +107,7 @@ func extractAddrs(resp *etcd3.GetResponse) []NodeData {
 
 	for i := range resp.Kvs {
 		if v := resp.Kvs[i].Value; v != nil {
-			nodeData := NodeData{}
+			nodeData := registry.ServiceInfo{}
 			err := json.Unmarshal(v, &nodeData)
 			if err != nil {
 				grpclog.Info("Parse node data error:", err)

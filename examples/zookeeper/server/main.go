@@ -4,7 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/liyue201/grpc-lb/examples/proto"
-	registry "github.com/liyue201/grpc-lb/registry/zookeeper"
+	"github.com/liyue201/grpc-lb/registry"
+	"github.com/liyue201/grpc-lb/registry/zookeeper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
@@ -57,17 +58,19 @@ func (s *RpcServer) Say(ctx context.Context, req *proto.SayReq) (*proto.SayResp,
 }
 
 func StartService() {
-	registrar, err := registry.NewRegistrar(
-		registry.Option{
-			ZkServers:      []string{"144.202.111.210:2189"},
-			RegistryDir:    registry.RegistryDir,
-			ServiceName:    "test",
-			ServiceVersion: "v1.0",
-			NodeID:         *nodeID,
-			NData: registry.NodeData{
-				Addr:     fmt.Sprintf("127.0.0.1:%d", *port),
-				Metadata: map[string]string{"weight": "1"},
-			},
+
+	service := &registry.ServiceInfo{
+		InstanceId: *nodeID,
+		Name:       "test",
+		Version:    "1.0",
+		Address:    fmt.Sprintf("127.0.0.1:%d", *port),
+		Metadata: map[string]string{"weight": "1"},
+	}
+
+	registrar, err := zk.NewRegistrar(
+		&zk.Config{
+			ZkServers:      []string{"10.0.101.68:2189"},
+			RegistryDir:    "/backend/services",
 			SessionTimeout: time.Second,
 		})
 	if err != nil {
@@ -85,14 +88,14 @@ func StartService() {
 
 	wg.Add(1)
 	go func() {
-		registrar.Register()
+		registrar.Register(service)
 		wg.Done()
 	}()
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
-	registrar.Unregister()
+	registrar.Unregister(service)
 	server.Stop()
 	wg.Wait()
 }
