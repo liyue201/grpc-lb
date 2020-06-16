@@ -15,7 +15,7 @@ func main() {
 	etcdConfg := etcd.Config{
 		Endpoints: []string{"http://10.0.101.68:2379"},
 	}
-	registry.RegisterResolver("etcd", etcdConfg, "/backend/services","test", "1.0")
+	registry.RegisterResolver("etcd", etcdConfg, "/backend/services", "test", "1.0")
 
 	c, err := grpc.Dial("etcd:///", grpc.WithInsecure(), grpc.WithBalancerName(balancer.Random))
 	if err != nil {

@@ -109,7 +109,6 @@ func (c *Registrar) Unregister(service *registry.ServiceInfo) error {
 	return nil
 }
 
-
 func (r *Registrar) Close() {
 
 }

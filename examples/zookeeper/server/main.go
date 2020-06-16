@@ -64,7 +64,7 @@ func StartService() {
 		Name:       "test",
 		Version:    "1.0",
 		Address:    fmt.Sprintf("127.0.0.1:%d", *port),
-		Metadata: map[string]string{"weight": "1"},
+		Metadata:   map[string]string{"weight": "1"},
 	}
 
 	registrar, err := zk.NewRegistrar(

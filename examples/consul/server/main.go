@@ -67,13 +67,13 @@ func StartService() {
 		Name:       "test",
 		Version:    "1.0",
 		Address:    fmt.Sprintf("127.0.0.1:%d", *port),
-		Metadata: map[string]string{"weight": "1"},
+		Metadata:   map[string]string{"weight": "1"},
 	}
 
 	registry, err := consul.NewRegistrar(
 		&consul.Config{
-			ConsulCfg:   config,
-			Ttl: 5,
+			ConsulCfg: config,
+			Ttl:       5,
 		})
 	if err != nil {
 		log.Panic(err)

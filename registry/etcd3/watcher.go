@@ -98,7 +98,7 @@ func (w *Watcher) Watch() chan []resolver.Address {
 	return out
 }
 
-func extractAddrs(resp *etcd3.GetResponse) [] registry.ServiceInfo {
+func extractAddrs(resp *etcd3.GetResponse) []registry.ServiceInfo {
 	addrs := []registry.ServiceInfo{}
 
 	if resp == nil || resp.Kvs == nil {

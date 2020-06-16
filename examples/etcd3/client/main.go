@@ -1,10 +1,10 @@
 package main
 
 import (
+	etcd3 "github.com/coreos/etcd/clientv3"
 	"github.com/liyue201/grpc-lb/balancer"
 	"github.com/liyue201/grpc-lb/examples/proto"
 	registry "github.com/liyue201/grpc-lb/registry/etcd3"
-	etcd3 "github.com/coreos/etcd/clientv3"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
