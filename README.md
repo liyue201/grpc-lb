@@ -4,7 +4,7 @@ This is a gRPC load balancing library for go.
  ![](/architecture.png)
  
 ## Feature
-- supports Random,RoundRobin and consistent-hash strategies.
+- supports Random, RoundRobin, LeastConnection and ConsistentHash strategies.
 - supports [etcd](https://github.com/etcd-io/etcd),[consul](https://github.com/consul/consul) and [zookeeper](https://github.com/apache/zookeeper) as a registry.
 
 ## Example
