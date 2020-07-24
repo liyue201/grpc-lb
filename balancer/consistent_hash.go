@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
-	"sync"
 )
 
 const ConsistentHash = "consistent_hash"
@@ -55,7 +54,6 @@ type consistentHashPicker struct {
 	subConns          map[string]balancer.SubConn
 	hash              *Ketama
 	consistentHashKey string
-	mu                sync.Mutex
 }
 
 func (p *consistentHashPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
