@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const Random = "random"
+const Random = "random_x"
 
 // newRandomBuilder creates a new random balancer builder.
 func newRandomBuilder() balancer.Builder {

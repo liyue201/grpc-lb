@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-const RoundRobin = "round_robin"
+const RoundRobin = "round_robin_x"
 
 // newRoundRobinBuilder creates a new roundrobin balancer builder.
 func newRoundRobinBuilder() balancer.Builder {

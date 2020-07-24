@@ -2,7 +2,6 @@ package etcd
 
 import (
 	"encoding/json"
-	"fmt"
 	etcd_cli "github.com/coreos/etcd/client"
 	"github.com/liyue201/grpc-lb/registry"
 	"golang.org/x/net/context"
@@ -58,7 +57,6 @@ func (w *Watcher) GetAllAddresses() []resolver.Address {
 			Metadata: &serviceInfo.Metadata,
 		})
 	}
-	fmt.Printf("[GetAllAddresses] %v\n", addrs)
 	return addrs
 }
 

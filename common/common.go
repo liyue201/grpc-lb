@@ -1,6 +1,7 @@
 package common
 
 import (
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/resolver"
 	"strconv"
 )
@@ -13,12 +14,13 @@ func GetWeight(addr resolver.Address) int {
 	if addr.Metadata == nil {
 		return 1
 	}
-	if m, ok := addr.Metadata.(*map[string]string); ok {
-		w, ok := (*m)[WeightKey]
-		if ok {
-			n, err := strconv.Atoi(w)
-			if err == nil && n > 0 {
-				return n
+	md, ok := addr.Metadata.(*metadata.MD)
+	if ok {
+		values := md.Get(WeightKey)
+		if len(values) > 0 {
+			weight, err := strconv.Atoi(values[0])
+			if err == nil {
+				return weight
 			}
 		}
 	}
