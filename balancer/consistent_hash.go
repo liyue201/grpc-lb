@@ -60,7 +60,6 @@ type consistentHashPicker struct {
 
 func (p *consistentHashPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
 	var sc balancer.SubConn
-	p.mu.Lock()
 	key, ok := ctx.Value(p.consistentHashKey).(string)
 	if ok {
 		targetAddr, ok := p.hash.Get(key)
@@ -68,7 +67,6 @@ func (p *consistentHashPicker) Pick(ctx context.Context, opts balancer.PickOptio
 			sc = p.subConns[targetAddr]
 		}
 	}
-	p.mu.Unlock()
 	return sc, nil, nil
 }
 

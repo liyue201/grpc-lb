@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/resolver"
 	"math/rand"
 	"sync"
+	"time"
 )
 
 const Random = "random"
@@ -37,20 +38,21 @@ func (*randomPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn
 			scs = append(scs, sc)
 		}
 	}
-
 	return &randomPicker{
 		subConns: scs,
+		rand:     rand.New(rand.NewSource(time.Now().Unix())),
 	}
 }
 
 type randomPicker struct {
 	subConns []balancer.SubConn
 	mu       sync.Mutex
+	rand     *rand.Rand
 }
 
 func (p *randomPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
 	p.mu.Lock()
-	sc := p.subConns[rand.Intn(len(p.subConns))]
+	sc := p.subConns[p.rand.Intn(len(p.subConns))]
 	p.mu.Unlock()
 	return sc, nil, nil
 }
