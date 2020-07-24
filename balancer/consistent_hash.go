@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/resolver"
 )
 
-const ConsistentHash = "consistent_hash"
+const ConsistentHash = "consistent_hash_x"
 
 var DefaultConsistentHashKey = "consistent-hash"
 

@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/resolver"
 	"sync"
 )
@@ -71,14 +72,14 @@ func (w *ConsulWatcher) handle(idx uint64, data interface{}) {
 		for _, check := range e.Checks {
 			if check.ServiceID == e.Service.ID {
 				if check.Status == api.HealthPassing {
-					metadata := map[string]string{}
+					md := metadata.MD{}
 					if len(e.Service.Tags) > 0 {
-						err := json.Unmarshal([]byte(e.Service.Tags[0]), &metadata)
+						err := json.Unmarshal([]byte(e.Service.Tags[0]), &md)
 						if err != nil {
 							grpclog.Infof("Parse node data error:", err)
 						}
 					}
-					addrs = append(addrs, resolver.Address{Addr: e.Service.Address, Metadata: &metadata})
+					addrs = append(addrs, resolver.Address{Addr: e.Service.Address, Metadata: &md})
 				}
 				break
 			}

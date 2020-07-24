@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const LeastConnection = "least_connection"
+const LeastConnection = "least_connection_x"
 
 // newLeastConnectionBuilder creates a new leastConnection balancer builder.
 func newLeastConnectionBuilder() balancer.Builder {

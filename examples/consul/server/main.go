@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	capi "github.com/hashicorp/consul/api"
+	"github.com/liyue201/grpc-lb/common"
 	"github.com/liyue201/grpc-lb/examples/proto"
 	"github.com/liyue201/grpc-lb/registry"
 	"github.com/liyue201/grpc-lb/registry/consul"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"log"
 	"net"
 	"os"
@@ -67,7 +69,7 @@ func StartService() {
 		Name:       "test",
 		Version:    "1.0",
 		Address:    fmt.Sprintf("127.0.0.1:%d", *port),
-		Metadata:   map[string]string{"weight": "1"},
+		Metadata:   metadata.Pairs(common.WeightKey, "1"),
 	}
 
 	registry, err := consul.NewRegistrar(

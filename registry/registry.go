@@ -1,11 +1,15 @@
 package registry
 
+import (
+	"google.golang.org/grpc/metadata"
+)
+
 type ServiceInfo struct {
 	InstanceId string
 	Name       string
 	Version    string
 	Address    string
-	Metadata   map[string]string
+	Metadata   metadata.MD
 }
 
 type Registrar interface {
