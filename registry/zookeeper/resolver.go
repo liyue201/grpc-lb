@@ -14,7 +14,7 @@ type zkResolver struct {
 	wg          sync.WaitGroup
 }
 
-func (r *zkResolver) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOption) (resolver.Resolver, error) {
+func (r *zkResolver) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 	r.cc = cc
 	var err error
 	r.watcher, err = newWatcher(r.zkServers, r.zkWatchPath)
@@ -42,7 +42,7 @@ func (r *zkResolver) start() {
 	}()
 }
 
-func (r *zkResolver) ResolveNow(o resolver.ResolveNowOption) {
+func (r *zkResolver) ResolveNow(o resolver.ResolveNowOptions) {
 }
 
 func (r *zkResolver) Close() {

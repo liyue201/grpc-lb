@@ -15,7 +15,7 @@ type consulResolver struct {
 	wg          sync.WaitGroup
 }
 
-func (r *consulResolver) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOption) (resolver.Resolver, error) {
+func (r *consulResolver) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 	r.cc = cc
 	r.watcher = newConsulWatcher(r.ServiceName, r.consulConf)
 	r.start()
@@ -37,7 +37,7 @@ func (r *consulResolver) start() {
 	}()
 }
 
-func (r *consulResolver) ResolveNow(o resolver.ResolveNowOption) {
+func (r *consulResolver) ResolveNow(o resolver.ResolveNowOptions) {
 }
 
 func (r *consulResolver) Close() {

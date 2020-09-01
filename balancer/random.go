@@ -1,12 +1,10 @@
 package balancer
 
 import (
-	"context"
 	"github.com/liyue201/grpc-lb/common"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/resolver"
 	"math/rand"
 	"sync"
 	"time"
@@ -16,7 +14,7 @@ const Random = "random_x"
 
 // newRandomBuilder creates a new random balancer builder.
 func newRandomBuilder() balancer.Builder {
-	return base.NewBalancerBuilderWithConfig(Random, &randomPickerBuilder{}, base.Config{HealthCheck: true})
+	return base.NewBalancerBuilder(Random, &randomPickerBuilder{}, base.Config{HealthCheck: true})
 }
 
 func init() {
@@ -25,17 +23,17 @@ func init() {
 
 type randomPickerBuilder struct{}
 
-func (*randomPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn) balancer.Picker {
-	grpclog.Infof("randomPicker: newPicker called with readySCs: %v", readySCs)
-	if len(readySCs) == 0 {
+func (*randomPickerBuilder) Build(buildInfo base.PickerBuildInfo) balancer.Picker {
+	grpclog.Infof("randomPicker: newPicker called with buildInfo: %v", buildInfo)
+	if len(buildInfo.ReadySCs) == 0 {
 		return base.NewErrPicker(balancer.ErrNoSubConnAvailable)
 	}
 	var scs []balancer.SubConn
 
-	for addr, sc := range readySCs {
-		weight := common.GetWeight(addr)
+	for subCon, subConnInfo := range buildInfo.ReadySCs {
+		weight := common.GetWeight(subConnInfo.Address)
 		for i := 0; i < weight; i++ {
-			scs = append(scs, sc)
+			scs = append(scs, subCon)
 		}
 	}
 	return &randomPicker{
@@ -50,9 +48,10 @@ type randomPicker struct {
 	rand     *rand.Rand
 }
 
-func (p *randomPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
+func (p *randomPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
+	ret := balancer.PickResult{}
 	p.mu.Lock()
-	sc := p.subConns[p.rand.Intn(len(p.subConns))]
+	ret.SubConn = p.subConns[p.rand.Intn(len(p.subConns))]
 	p.mu.Unlock()
-	return sc, nil, nil
+	return ret, nil
 }

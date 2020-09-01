@@ -1,11 +1,9 @@
 package balancer
 
 import (
-	"context"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/resolver"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -16,7 +14,7 @@ const LeastConnection = "least_connection_x"
 
 // newLeastConnectionBuilder creates a new leastConnection balancer builder.
 func newLeastConnectionBuilder() balancer.Builder {
-	return base.NewBalancerBuilderWithConfig(LeastConnection, &leastConnectionPickerBuilder{}, base.Config{HealthCheck: true})
+	return base.NewBalancerBuilder(LeastConnection, &leastConnectionPickerBuilder{}, base.Config{HealthCheck: true})
 }
 
 func init() {
@@ -25,15 +23,16 @@ func init() {
 
 type leastConnectionPickerBuilder struct{}
 
-func (*leastConnectionPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn) balancer.Picker {
-	grpclog.Infof("leastConnectionPicker: newPicker called with readySCs: %v", readySCs)
-	if len(readySCs) == 0 {
+func (*leastConnectionPickerBuilder) Build(buildInfo base.PickerBuildInfo) balancer.Picker {
+	grpclog.Infof("leastConnectionPicker: newPicker called with buildInfo: %v", buildInfo)
+
+	if len(buildInfo.ReadySCs) == 0 {
 		return base.NewErrPicker(balancer.ErrNoSubConnAvailable)
 	}
-	var nodes []*Node
 
-	for _, sc := range readySCs {
-		nodes = append(nodes, &Node{sc, 0})
+	var nodes []*Node
+	for subConn, _ := range buildInfo.ReadySCs {
+		nodes = append(nodes, &Node{subConn, 0})
 	}
 
 	return &leastConnectionPicker{
@@ -53,11 +52,11 @@ type leastConnectionPicker struct {
 	rand  *rand.Rand
 }
 
-func (p *leastConnectionPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
+func (p *leastConnectionPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
+	ret := balancer.PickResult{}
 	if len(p.nodes) == 0 {
-		return nil, nil, balancer.ErrNoSubConnAvailable
+		return ret, balancer.ErrNoSubConnAvailable
 	}
-
 	var node *Node
 	if len(p.nodes) == 1 {
 		node = p.nodes[0]
@@ -75,10 +74,12 @@ func (p *leastConnectionPicker) Pick(ctx context.Context, opts balancer.PickOpti
 			node = p.nodes[b]
 		}
 	}
-
 	atomic.AddInt64(&node.inflight, 1)
 
-	return node, func(info balancer.DoneInfo) {
+	ret.SubConn = node
+	ret.Done = func(info balancer.DoneInfo) {
 		atomic.AddInt64(&node.inflight, -1)
-	}, nil
+	}
+
+	return ret, nil
 }

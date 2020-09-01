@@ -1,13 +1,11 @@
 package balancer
 
 import (
-	"context"
 	"fmt"
 	"github.com/liyue201/grpc-lb/common"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/resolver"
 )
 
 const ConsistentHash = "consistent_hash_x"
@@ -20,16 +18,16 @@ func InitConsistentHashBuilder(consistanceHashKey string) {
 
 // newConsistanceHashBuilder creates a new ConsistanceHash balancer builder.
 func newConsistentHashBuilder(consistentHashKey string) balancer.Builder {
-	return base.NewBalancerBuilderWithConfig(ConsistentHash, &consistentHashPickerBuilder{consistentHashKey}, base.Config{HealthCheck: true})
+	return base.NewBalancerBuilder(ConsistentHash, &consistentHashPickerBuilder{consistentHashKey}, base.Config{HealthCheck: true})
 }
 
 type consistentHashPickerBuilder struct {
 	consistentHashKey string
 }
 
-func (b *consistentHashPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn) balancer.Picker {
-	grpclog.Infof("consistentHashPicker: newPicker called with readySCs: %v", readySCs)
-	if len(readySCs) == 0 {
+func (b *consistentHashPickerBuilder) Build(buildInfo base.PickerBuildInfo) balancer.Picker {
+	grpclog.Infof("consistentHashPicker: newPicker called with buildInfo: %v", buildInfo)
+	if len(buildInfo.ReadySCs) == 0 {
 		return base.NewErrPicker(balancer.ErrNoSubConnAvailable)
 	}
 
@@ -39,10 +37,10 @@ func (b *consistentHashPickerBuilder) Build(readySCs map[resolver.Address]balanc
 		consistentHashKey: b.consistentHashKey,
 	}
 
-	for addr, sc := range readySCs {
-		weight := common.GetWeight(addr)
+	for sc, conInfo := range buildInfo.ReadySCs {
+		weight := common.GetWeight(conInfo.Address)
 		for i := 0; i < weight; i++ {
-			node := wrapAddr(addr.Addr, i)
+			node := wrapAddr(conInfo.Address.Addr, i)
 			picker.hash.Add(node)
 			picker.subConns[node] = sc
 		}
@@ -56,16 +54,16 @@ type consistentHashPicker struct {
 	consistentHashKey string
 }
 
-func (p *consistentHashPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
-	var sc balancer.SubConn
-	key, ok := ctx.Value(p.consistentHashKey).(string)
+func (p *consistentHashPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
+	var ret balancer.PickResult
+	key, ok := info.Ctx.Value(p.consistentHashKey).(string)
 	if ok {
 		targetAddr, ok := p.hash.Get(key)
 		if ok {
-			sc = p.subConns[targetAddr]
+			ret.SubConn = p.subConns[targetAddr]
 		}
 	}
-	return sc, nil, nil
+	return ret, nil
 }
 
 func wrapAddr(addr string, idx int) string {
