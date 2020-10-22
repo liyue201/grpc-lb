@@ -43,18 +43,17 @@ func connect(zkServers []string, sessionTimeout time.Duration) (*zk.Conn, error)
 	if err != nil {
 		return nil, err
 	}
-	ticker := time.NewTimer(time.Second * 10)
+	timer := time.NewTimer(time.Second * 10)
 	for {
 		select {
 		case e := <-event:
 			if e.State == zk.StateConnected {
 				return c, nil
 			}
-		case <-ticker.C:
-			break
+		case <-timer.C:
+			return nil, errors.New("connect zk timeout")
 		}
 	}
-	return nil, errors.New("connect zk timeout")
 }
 
 // create node one by one
