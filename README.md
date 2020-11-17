@@ -53,4 +53,7 @@ func main() {
 see more [examples](/examples)
 
 
+## Stargazers over time
+
+[![Stargazers over time](https://starchart.cc/liyue201/grpc-lb.svg)](https://starchart.cc/liyue201/grpc-lb)
 
