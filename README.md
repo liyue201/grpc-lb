@@ -1,4 +1,7 @@
+# This repo is no longer maintained
+
 # grpc-lb
+
 This is a gRPC load balancing library for go.
 
  ![](/architecture.png)
